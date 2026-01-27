@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Callister_Scouting
 
-## Getting Started
+Callister 9024 – FRC 2026 için mobil öncelikli dijital scouting uygulaması. Yarışmalarda kağıt scouting’in yerini alır.
 
-First, run the development server:
+## Tech Stack
+
+- **Frontend:** Next.js (App Router), React, Tailwind CSS
+- **Backend:** Next.js API routes
+- **Database:** Neon PostgreSQL
+- **Auth:** Cookie-based sessions with role-based access (admin, scout, strategy)
+
+## Features
+
+- **Roles:** admin, scout, strategy. Scouts see only their assigned teams.
+- **Events & teams:** Create events, add team numbers. Admin assigns exactly 2 teams per scout per event.
+- **Pit scouting:** Drivetrain, robot type, intake, shooter, climb, notes.
+- **Match scouting:** Auto (attempted, score, consistency), teleop (game pieces, cycle speed, defense), endgame (climb), driver skill, comments.
+- **Team summary:** Averages, climb rate, pit vs match comparison.
+- **Export:** Admin can download CSV (all data, team summaries, full event data).
+
+## Setup
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Database (Neon PostgreSQL)
+
+Create a project at [neon.tech](https://neon.tech), copy the connection string, and add to `.env`:
+
+```env
+DATABASE_URL="postgresql://user:password@host/database?sslmode=require"
+JWT_SECRET="your-long-random-secret-at-least-32-chars"
+```
+
+See `.env.example` for a template.
+
+### 3. Push schema and seed admin
+
+```bash
+npx prisma generate
+npx prisma db push
+npm run db:seed
+```
+
+Default seed creates admin `admin@scout.local` / `admin123`. Override with:
+
+```bash
+SEED_ADMIN_EMAIL=you@example.com SEED_ADMIN_PASSWORD=yourpass npm run db:seed
+```
+
+### 4. Run dev server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000), sign in, then go to Events.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start dev server |
+| `npm run build` | Build for production |
+| `npm run start` | Start production server |
+| `npm run db:generate` | Generate Prisma client |
+| `npm run db:push` | Push schema to DB (no migrations) |
+| `npm run db:studio` | Open Prisma Studio |
+| `npm run db:seed` | Create default admin user |
 
-## Learn More
+## Project layout
 
-To learn more about Next.js, take a look at the following resources:
+- `prisma/schema.prisma` – Database schema
+- `src/app/api/` – API routes (auth, events, pit-scout, match-scout, export)
+- `src/app/events/` – Event list, detail, pit/match forms, teams, assign, export
+- `src/lib/auth.ts` – Session helpers (login, requireRole, etc.)
+- `src/lib/db.ts` – Prisma client
+- `src/lib/constants.ts` – Form option constants
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Offline / reliability
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Built for poor competition wifi: minimal dependencies, simple forms, large tap targets.
+- No offline persistence yet; add a service worker and IndexedDB later if needed.
+- Export is one-click CSV for backup and analysis in Excel.
 
-## Deploy on Vercel
+## Creating users
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Only admins can create users. Use the Register API (or add a simple admin UI):
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -H "Cookie: <your-admin-session-cookie>" \
+  -d '{"email":"scout@team.org","password":"secret","role":"scout","name":"Scout One"}'
+```
+
+Roles: `admin`, `scout`, `strategy`.

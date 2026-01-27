@@ -1,0 +1,155 @@
+// FRC Scouting App - Database Schema
+// Neon PostgreSQL compatible
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  scout
+  strategy
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  passwordHash String  @map("password_hash")
+  role         Role     @default(scout)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  scoutAssignments ScoutAssignment[]
+  pitScouts        PitScout[]
+  matchScouts      MatchScout[]
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique // e.g. "2026txcmp"
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  eventTeams      EventTeam[]
+  scoutAssignments ScoutAssignment[]
+  pitScouts       PitScout[]
+  matches        Match[]
+  matchScouts    MatchScout[]
+}
+
+model Team {
+  id     String @id @default(cuid())
+  number Int    @unique // FRC team number
+  name   String?
+
+  eventTeams       EventTeam[]
+  scoutAssignments ScoutAssignment[]
+  pitScouts        PitScout[]
+  matchScouts      MatchScout[]
+}
+
+model EventTeam {
+  eventId String
+  teamId  String
+  event   Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  team    Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, teamId])
+}
+
+// Admin assigns exactly 2 teams per scout per event
+model ScoutAssignment {
+  id     String @id @default(cuid())
+  eventId String
+  userId  String
+  teamId  String
+  event   Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team   Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId, teamId])
+  @@index([eventId, userId])
+}
+
+// Pit scouting: one record per team per event (updated on re-submit)
+model PitScout {
+  id                String   @id @default(cuid())
+  eventId           String
+  teamId            String
+  userId            String
+  drivetrainType    String   @map("drivetrain_type")  // swerve, tank, west_coast, other
+  robotType         String   @map("robot_type")       // kitbot, custom
+  intakeType        String?  @map("intake_type")
+  shooterType       String?  @map("shooter_type")
+  climbCapability   String?  @map("climb_capability")
+  teamToldUs        String?  @map("team_told_us")     @db.Text
+  scoutObservations String? @map("scout_observations") @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  team  Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, teamId])
+  @@index([eventId])
+  @@index([teamId])
+}
+
+model Match {
+  id          String   @id @default(cuid())
+  eventId     String
+  matchNumber Int      @map("match_number")
+  matchType   String   @map("match_type") // "qual", "playoff"
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  event       Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  matchScouts MatchScout[]
+
+  @@unique([eventId, matchNumber, matchType])
+  @@index([eventId])
+}
+
+// One entry per match per team
+model MatchScout {
+  id        String   @id @default(cuid())
+  eventId   String
+  matchId   String
+  teamId    String
+  userId    String
+  // Auto
+  autoAttempted    Boolean @default(false) @map("auto_attempted")
+  autoScoreCount   Int     @default(0) @map("auto_score_count")
+  autoDescription  String? @map("auto_description") @db.Text
+  autoConsistency  Int?    @map("auto_consistency")  // 1-5
+  // Teleop
+  gamePieceCount   Int     @default(0) @map("game_piece_count")
+  cycleSpeed       String? @map("cycle_speed")
+  defensePlayed    Boolean @default(false) @map("defense_played")
+  // Endgame
+  climbAttempted   Boolean @default(false) @map("climb_attempted")
+  climbSuccess     Boolean @default(false) @map("climb_success")
+  climbType        String? @map("climb_type")
+  // Strategy & notes
+  requestedStrategy String? @map("requested_strategy") @db.Text
+  driverSkill       Int?    @map("driver_skill")       // 1-5
+  scoutComments     String? @map("scout_comments")      @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team  Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, teamId])
+  @@index([eventId])
+  @@index([teamId])
+}
