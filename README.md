@@ -80,6 +80,22 @@ Open [http://localhost:3000](http://localhost:3000), sign in, then go to Events.
 - `src/lib/db.ts` – Prisma client
 - `src/lib/constants.ts` – Form option constants
 
+## Vercel deployment
+
+1. Repoyu Vercel’e bağla (Import Git Repository).
+2. **Root Directory:** Boş bırak veya `.` (proje kökü).
+3. **Framework Preset:** Next.js (genelde otomatik seçilir).
+4. **Build Command:** `npm run build` (veya boş bırak, varsayılan kullanılır).
+5. **Environment Variables** (Project Settings → Environment Variables):
+   - `DATABASE_URL` → Neon connection string (örn. `postgresql://...?sslmode=require`)
+   - `JWT_SECRET` → En az 32 karakter rastgele string
+6. Deploy’u tetikle. Build log’da hata yoksa ana sayfa (`/`) açılmalıdır.
+
+**404 NOT_FOUND alıyorsan:**
+- Build log’da hata var mı kontrol et; `prisma generate` veya `next build` hata veriyorsa önce onu düzelt.
+- Root Directory’nin proje kökü (package.json’ın olduğu klasör) olduğundan emin ol.
+- Production/Preview ortamında `DATABASE_URL` ve `JWT_SECRET` tanımlı mı kontrol et.
+
 ## Offline / reliability
 
 - Built for poor competition wifi: minimal dependencies, simple forms, large tap targets.
