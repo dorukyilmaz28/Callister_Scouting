@@ -40,13 +40,6 @@ function LoginForm() {
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-[#0f0f23] via-[#1a1a3e] to-[#0f0f23]">
       <div className="w-full max-w-[400px] mx-auto">
         <div className="card p-6 mb-6 shadow-xl">
-          <div className="flex justify-center mb-4">
-            <img
-              src="/callister-logo.png"
-              alt="Callister"
-              className="w-24 h-24 object-contain"
-            />
-          </div>
           <h1 className="text-2xl font-bold text-center text-[#e0e7ff] mb-1">
             Callister 9024
           </h1>
