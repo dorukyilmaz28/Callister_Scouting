@@ -5,15 +5,15 @@
   --bg-dark: #0f0f23;
   --bg-gradient-from: #0f0f23;
   --bg-gradient-to: #1a1a3e;
-  --bg-card: #eef2ff;
-  --bg-card-subtle: #eef2ff;
+  --bg-card: #1a1a3e;
+  --bg-card-subtle: #252550;
   --text-on-dark: #f0f0f5;
   --text-on-dark-muted: rgba(240, 240, 245, 0.7);
-  --text-on-card: #1e1b4b;
+  --text-on-card: #e0e7ff;
   --accent: #6366f1;
   --accent-hover: #4f46e5;
-  --accent-light: rgba(99, 102, 241, 0.2);
-  --border-card: #c7d2fe;
+  --accent-light: rgba(99, 102, 241, 0.25);
+  --border-card: rgba(99, 102, 241, 0.35);
   --touch-min: 44px;
   --radius-lg: 14px;
   --radius-xl: 18px;
@@ -95,7 +95,7 @@ body {
   font-size: 1rem;
   border: 2px solid var(--border-card);
   border-radius: 12px;
-  background: #f8fafc;
+  background: #1e1e42;
   color: var(--text-on-card);
 }
 
@@ -111,7 +111,7 @@ body {
   padding: 12px 16px;
   border-radius: 12px;
   border: 2px solid var(--border-card);
-  background: #f8fafc;
+  background: #1e1e42;
   cursor: pointer;
   display: flex;
   align-items: center;

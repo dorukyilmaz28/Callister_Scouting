@@ -14,7 +14,7 @@ export default function ExportPage() {
       <p className="text-[#f0f0f0]/70 text-sm mb-6">Veri dışa aktar</p>
 
       <section className="card p-5 mb-4">
-        <h2 className="font-semibold text-[#1a1a2e] mb-4">📤 Veri dışa aktar</h2>
+        <h2 className="font-semibold text-[#e0e7ff] mb-4">📤 Veri dışa aktar</h2>
         <div className="space-y-3">
           <a
             href={`${base}?type=all`}
@@ -41,8 +41,8 @@ export default function ExportPage() {
       </section>
 
       <section className="card p-5 mb-4">
-        <h2 className="font-semibold text-[#1a1a2e] mb-2">📊 Takım özetleri</h2>
-        <p className="text-[#1a1a2e]/70 text-sm mb-4">
+        <h2 className="font-semibold text-[#e0e7ff] mb-2">📊 Takım özetleri</h2>
+        <p className="text-[#e0e7ff]/70 text-sm mb-4">
           Takım özetleri (ortalama auto, tırmanma oranı vb.) Excel indirmesinde yer alır.
         </p>
         <a

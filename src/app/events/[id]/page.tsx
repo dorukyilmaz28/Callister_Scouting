@@ -51,7 +51,7 @@ export default function EventAnaSayfa() {
 
       {teams.length === 0 ? (
         <div className="card p-5 mb-4">
-          <p className="text-[#1a1a2e]/80 text-center">
+          <p className="text-[#e0e7ff]/90 text-center">
             Henüz takım atanmadı. Yönetici size takım atayana kadar bekleyin.
           </p>
           {(user?.role === "admin" || user?.role === "strategy") && (
@@ -73,12 +73,12 @@ export default function EventAnaSayfa() {
             >
               <div className="card p-4 flex items-center justify-between gap-3 min-h-[56px]">
                 <div>
-                  <span className="font-semibold text-[#1a1a2e]">Team {t.teamNumber}</span>
-                  <p className="text-sm text-[#1a1a2e]/70 mt-0.5">
+                  <span className="font-semibold text-[#e0e7ff]">Team {t.teamNumber}</span>
+                  <p className="text-sm text-[#e0e7ff]/85 mt-0.5">
                     Pit {t.pitDone ? "✔" : "❌"} · Match {t.matchCount}
                   </p>
                 </div>
-                <span className="text-[#1a1a2e]/50">→</span>
+                <span className="text-[#e0e7ff]/50">→</span>
               </div>
             </Link>
           ))}
@@ -96,19 +96,19 @@ export default function EventAnaSayfa() {
         <div className="card p-4 space-y-2 mt-4">
           <Link
             href={`/events/${id}/assign`}
-            className="block py-2 text-[#1a1a2e] font-medium"
+            className="block py-2 text-[#e0e7ff] font-medium"
           >
             Scout atama
           </Link>
           <Link
             href={`/events/${id}/export`}
-            className="block py-2 text-[#1a1a2e] font-medium"
+            className="block py-2 text-[#e0e7ff] font-medium"
           >
             📤 Dışa aktar
           </Link>
           <Link
             href={`/events/${id}/teams`}
-            className="block py-2 text-[#1a1a2e] font-medium"
+            className="block py-2 text-[#e0e7ff] font-medium"
           >
             Tüm takımlar
           </Link>

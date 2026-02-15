@@ -40,14 +40,14 @@ function LoginForm() {
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-[#0f0f23] via-[#1a1a3e] to-[#0f0f23]">
       <div className="w-full max-w-[400px] mx-auto">
         <div className="card p-6 mb-6 shadow-xl">
-          <p className="hero-tagline text-[#1a1a2e]/70 text-center mb-1">Callister 9024</p>
-          <h1 className="text-xl font-bold text-center text-[#1a1a2e] mb-0.5">
+          <p className="hero-tagline text-[#e0e7ff]/70 text-center mb-1">Callister 9024</p>
+          <h1 className="text-xl font-bold text-center text-[#e0e7ff] mb-0.5">
             FRC Scouting 2026
           </h1>
-          <p className="text-center text-[#1a1a2e]/60 text-sm mb-6">Giriş yapın</p>
+          <p className="text-center text-[#e0e7ff]/60 text-sm mb-6">Giriş yapın</p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
+              <label htmlFor="name" className="block text-sm font-medium text-[#e0e7ff] mb-1.5">
                 İsim / ID
               </label>
               <input
@@ -62,7 +62,7 @@ function LoginForm() {
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
+              <label htmlFor="password" className="block text-sm font-medium text-[#e0e7ff] mb-1.5">
                 Şifre (4 haneli)
               </label>
               <input
@@ -88,7 +88,7 @@ function LoginForm() {
               {loading ? "Giriş yapılıyor…" : "Giriş yap"}
             </button>
           </form>
-          <p className="mt-4 text-center text-sm text-[#1a1a2e]/60">Yarışmaya hazır.</p>
+          <p className="mt-4 text-center text-sm text-[#e0e7ff]/60">Yarışmaya hazır.</p>
         </div>
       </div>
     </div>

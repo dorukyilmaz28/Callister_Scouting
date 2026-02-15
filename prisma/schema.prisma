@@ -84,7 +84,7 @@ model PitScout {
   eventId           String
   teamId            String
   userId            String
-  drivetrainType    String   @map("drivetrain_type")  // swerve, tank, west_coast, other
+  drivetrainType    String   @map("drivetrain_type")  // swerve, tank, mecanum_drive, other
   robotType         String   @map("robot_type")       // kitbot, custom
   intakeType        String?  @map("intake_type")
   shooterType       String?  @map("shooter_type")

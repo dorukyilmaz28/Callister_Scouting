@@ -68,7 +68,7 @@ export default function EventsPage() {
       </div>
       {events.length === 0 ? (
         <div className="card p-5">
-          <p className="text-[#1a1a2e]/80">Henüz etkinlik yok. Yönetici oluşturabilir.</p>
+          <p className="text-[#e0e7ff]/90">Henüz etkinlik yok. Yönetici oluşturabilir.</p>
         </div>
       ) : (
         <ul className="space-y-3">
@@ -76,12 +76,12 @@ export default function EventsPage() {
             <li key={ev.id}>
               <Link href={`/events/${ev.id}`} className="block">
                 <div className="card p-4 hover:border-[#3b82f6]/50">
-                  <div className="font-semibold text-[#1a1a2e]">{ev.name}</div>
-                  <div className="text-sm text-[#1a1a2e]/70 mt-0.5">
+                  <div className="font-semibold text-[#e0e7ff]">{ev.name}</div>
+                  <div className="text-sm text-[#e0e7ff]/85 mt-0.5">
                     {ev.code} · {ev.eventTeams?.length ?? 0} takım
                     {ev._count?.matches != null && ` · ${ev._count.matches} maç`}
                   </div>
-                  <div className="text-xs text-[#1a1a2e]/50 mt-1">
+                  <div className="text-xs text-[#e0e7ff]/50 mt-1">
                     {new Date(ev.startDate).toLocaleDateString("tr-TR")} –{" "}
                     {new Date(ev.endDate).toLocaleDateString("tr-TR")}
                   </div>

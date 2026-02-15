@@ -47,7 +47,7 @@ function Stepper({ value, onChange, min = 0 }: { value: number; onChange: (n: nu
       >
         −
       </button>
-      <span className="min-w-[3rem] text-center font-bold text-[#1a1a2e] text-2xl">{value}</span>
+      <span className="min-w-[3rem] text-center font-bold text-[#e0e7ff] text-2xl">{value}</span>
       <button
         type="button"
         onClick={() => onChange(value + 1)}
@@ -195,7 +195,7 @@ export default function MatchScoutPage() {
     return (
       <div className="app-shell pt-4">
         <div className="card p-5">
-          <p className="text-[#1a1a2e]/80">Match scout için size atanmış takım yok. Yönetici ile iletişime geçin.</p>
+          <p className="text-[#e0e7ff]/80">Match scout için size atanmış takım yok. Yönetici ile iletişime geçin.</p>
           <Link href={`/events/${eventId}`} className="text-[#3b82f6] mt-2 inline-block">← Ana sayfa</Link>
         </div>
       </div>
@@ -212,10 +212,10 @@ export default function MatchScoutPage() {
       </header>
 
       <div className="card p-4 mb-4 space-y-3">
-        <h2 className="font-semibold text-[#1a1a2e] text-sm">Maç & Takım</h2>
+        <h2 className="font-semibold text-[#e0e7ff] text-sm">Maç & Takım</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-[#1a1a2e]/70 mb-1">Maç no</label>
+            <label className="block text-xs text-[#e0e7ff]/70 mb-1">Maç no</label>
             <input
               type="number"
               min={1}
@@ -226,11 +226,11 @@ export default function MatchScoutPage() {
             />
           </div>
           <div>
-            <label className="block text-xs text-[#1a1a2e]/70 mb-1">Takım</label>
+            <label className="block text-xs text-[#e0e7ff]/70 mb-1">Takım</label>
             {!teamsLoaded ? (
-              <div className="input-field bg-[#f0f0f0] text-[#1a1a2e]/60">Yükleniyor…</div>
+              <div className="input-field bg-[#1e1e42] text-[#e0e7ff]/75">Yükleniyor…</div>
             ) : teamOptions.length === 0 ? (
-              <p className="text-sm text-[#1a1a2e]/70">Henüz takım atanmadı.</p>
+              <p className="text-sm text-[#e0e7ff]/70">Henüz takım atanmadı.</p>
             ) : (
               <select
                 value={teamNumber}
@@ -255,15 +255,15 @@ export default function MatchScoutPage() {
               onClick={() => setMatchType(o.value)}
               className={`flex-1 py-2.5 px-3 text-sm font-medium rounded-lg border-2 ${
                 matchType === o.value
-                  ? "border-[#6366f1] bg-[#eef2ff] text-[#1e1b4b]"
-                  : "border-[#c7d2fe] bg-[#e0e7ff] text-[#1e1b4b]"
+                  ? "border-[#6366f1] bg-indigo-500/25 text-[#e0e7ff]"
+                  : "border-indigo-400/40 bg-[#252550] text-[#e0e7ff]"
               }`}
             >
               {o.label}
             </button>
           ))}
         </div>
-        {loading && <p className="text-xs text-[#1a1a2e]/60">Önceki veri yükleniyor…</p>}
+        {loading && <p className="text-xs text-[#e0e7ff]/60">Önceki veri yükleniyor…</p>}
       </div>
 
       {!canProceed && step === 1 && (
@@ -272,7 +272,7 @@ export default function MatchScoutPage() {
 
       {canProceed && step === 1 && (
         <div className="card p-5 space-y-5">
-          <h2 className="font-semibold text-[#1a1a2e]">AUTO</h2>
+          <h2 className="font-semibold text-[#e0e7ff]">AUTO</h2>
           <label className="option-row w-full cursor-pointer">
             <input
               type="checkbox"
@@ -283,11 +283,11 @@ export default function MatchScoutPage() {
             <span>Denendi</span>
           </label>
           <div>
-            <label className="block text-sm font-medium text-[#1a1a2e] mb-2">Skor</label>
+            <label className="block text-sm font-medium text-[#e0e7ff] mb-2">Skor</label>
             <Stepper value={form.autoScoreCount} onChange={(n) => setForm((f) => ({ ...f, autoScoreCount: n }))} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Auto notları</label>
+            <label className="block text-sm font-medium text-[#e0e7ff] mb-1">Auto notları</label>
             <textarea
               value={form.autoDescription ?? ""}
               onChange={(e) => setForm((f) => ({ ...f, autoDescription: e.target.value || null }))}
@@ -297,9 +297,9 @@ export default function MatchScoutPage() {
             />
           </div>
 
-          <h2 className="font-semibold text-[#1a1a2e] pt-2">TELEOP</h2>
+          <h2 className="font-semibold text-[#e0e7ff] pt-2">TELEOP</h2>
           <div>
-            <label className="block text-sm font-medium text-[#1a1a2e] mb-2">Parça sayısı</label>
+            <label className="block text-sm font-medium text-[#e0e7ff] mb-2">Parça sayısı</label>
             <Stepper value={form.gamePieceCount} onChange={(n) => setForm((f) => ({ ...f, gamePieceCount: n }))} />
           </div>
           <label className="option-row w-full cursor-pointer">
@@ -320,7 +320,7 @@ export default function MatchScoutPage() {
 
       {canProceed && step === 2 && (
         <div className="card p-5 space-y-5">
-          <h2 className="font-semibold text-[#1a1a2e]">ENDGAME</h2>
+          <h2 className="font-semibold text-[#e0e7ff]">ENDGAME</h2>
           <label className="option-row w-full cursor-pointer">
             <input
               type="checkbox"
@@ -340,7 +340,7 @@ export default function MatchScoutPage() {
             <span>Başarılı</span>
           </label>
           <div>
-            <label className="block text-sm font-medium text-[#1a1a2e] mb-2">Tip</label>
+            <label className="block text-sm font-medium text-[#e0e7ff] mb-2">Tip</label>
             <select
               value={form.climbType ?? ""}
               onChange={(e) => setForm((f) => ({ ...f, climbType: e.target.value || null }))}
@@ -353,7 +353,7 @@ export default function MatchScoutPage() {
             </select>
             {form.climbType === "other" && (
               <div className="mt-2">
-                <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
+                <label className="block text-sm font-medium text-[#e0e7ff] mb-1.5">
                   Diğer (Climb tipi) – ne yazayım?
                 </label>
                 <input
@@ -367,7 +367,7 @@ export default function MatchScoutPage() {
             )}
           </div>
 
-          <h2 className="font-semibold text-[#1a1a2e] pt-2">Sürücü becerisi</h2>
+          <h2 className="font-semibold text-[#e0e7ff] pt-2">Sürücü becerisi</h2>
           <div className="flex gap-2 flex-wrap">
             {RATING_1_5.map((n) => (
               <button
@@ -377,7 +377,7 @@ export default function MatchScoutPage() {
                 className={`touch w-12 h-12 rounded-lg font-medium text-lg ${
                   form.driverSkill === n
                     ? "bg-[#6366f1] text-white"
-                    : "bg-[#e0e7ff] text-[#1e1b4b]"
+                    : "bg-indigo-500/25 text-[#e0e7ff]"
                 }`}
               >
                 {n}
@@ -386,7 +386,7 @@ export default function MatchScoutPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Strateji notları</label>
+            <label className="block text-sm font-medium text-[#e0e7ff] mb-1">Strateji notları</label>
             <textarea
               value={form.scoutComments ?? ""}
               onChange={(e) => setForm((f) => ({ ...f, scoutComments: e.target.value || null }))}

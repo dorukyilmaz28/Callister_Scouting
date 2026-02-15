@@ -3,7 +3,7 @@
 export const DRIVETRAIN_OPTIONS = [
   { value: "swerve", label: "Swerve" },
   { value: "tank", label: "Tank" },
-  { value: "west_coast", label: "West Coast" },
+  { value: "mecanum_drive", label: "Mecanum Drive" },
   { value: "other", label: "Diğer" },
 ] as const;
 
@@ -13,8 +13,8 @@ export const ROBOT_TYPE_OPTIONS = [
 ] as const;
 
 export const INTAKE_OPTIONS = [
-  { value: "floor", label: "Floor" },
-  { value: "human_player", label: "Human Player" },
+  { value: "", label: "Yok" },
+  { value: "other", label: "Özel" },
 ] as const;
 
 export const SHOOTER_OPTIONS = [

@@ -130,7 +130,7 @@ export default function AssignPage() {
                 className={`py-3 px-4 text-base font-medium rounded-lg border-2 ${
                   selectedTeams.includes(t.id)
                     ? "border-[#6366f1] bg-[#eef2ff] text-[#4338ca]"
-                    : "border-[#c7d2fe] bg-[#e0e7ff] text-[#1e1b4b]"
+                    : "border-indigo-400/40 bg-indigo-500/25 text-[#e0e7ff]"
                 }`}
               >
                 {t.number}

@@ -15,8 +15,7 @@ type Team = { id: string; number: number };
 type PitData = {
   drivetrainType: string;
   robotType: string;
-  intakeFloor: boolean;
-  intakeHP: boolean;
+  intakeType: string;
   shooterType: string;
   climbCapability: string;
   teamToldUs: string;
@@ -45,8 +44,7 @@ export default function PitScoutPage() {
   const [pit, setPit] = useState<PitData>({
     drivetrainType: "",
     robotType: "",
-    intakeFloor: false,
-    intakeHP: false,
+    intakeType: "",
     shooterType: "",
     climbCapability: "",
     teamToldUs: "",
@@ -57,8 +55,8 @@ export default function PitScoutPage() {
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   /** "Diğer" / "Özel" seçildiğinde kullanıcının yazdığı metin */
   const [drivetrainOtherText, setDrivetrainOtherText] = useState("");
+  const [intakeOtherText, setIntakeOtherText] = useState("");
   const [shooterOtherText, setShooterOtherText] = useState("");
-  const [robotTypeOtherText, setRobotTypeOtherText] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -90,47 +88,45 @@ export default function PitScoutPage() {
       .then((data) => {
         const one = Array.isArray(data) ? data[0] : data;
         if (one) {
-          const i = String(one.intakeType ?? "");
+          const inv = parseOther(one.intakeType ?? "");
           const drv = parseOther(one.drivetrainType ?? "");
           const sh = parseOther(one.shooterType ?? "");
           const rob = parseOther(one.robotType ?? "");
           setPit({
             drivetrainType: drv.base || (one.drivetrainType ?? ""),
             robotType: rob.base || (one.robotType ?? ""),
-            intakeFloor: i.includes("floor"),
-            intakeHP: i.includes("human_player"),
+            intakeType: inv.base === "other" ? "other" : "",
             shooterType: sh.base || (one.shooterType ?? ""),
             climbCapability: one.climbCapability ?? "",
             teamToldUs: one.teamToldUs ?? "",
             scoutObservations: one.scoutObservations ?? "",
           });
           setDrivetrainOtherText(drv.custom);
+          setIntakeOtherText(inv.custom);
           setShooterOtherText(sh.custom);
-          setRobotTypeOtherText(rob.custom);
         } else {
           setPit({
             drivetrainType: "",
             robotType: "",
-            intakeFloor: false,
-            intakeHP: false,
+            intakeType: "",
             shooterType: "",
             climbCapability: "",
             teamToldUs: "",
             scoutObservations: "",
           });
           setDrivetrainOtherText("");
+          setIntakeOtherText("");
           setShooterOtherText("");
-          setRobotTypeOtherText("");
         }
       });
   }, [eventId, teamId, teams.length]);
 
   async function save() {
     if (!teamId) return;
-    const intakeParts: string[] = [];
-    if (pit.intakeFloor) intakeParts.push("floor");
-    if (pit.intakeHP) intakeParts.push("human_player");
-    const intakeType = intakeParts.length ? intakeParts.join(",") : null;
+    const intakeType =
+      pit.intakeType === "other"
+        ? (intakeOtherText.trim() ? `other|${intakeOtherText.trim()}` : "other")
+        : null;
     setSaving(true);
     setMessage(null);
     try {
@@ -144,10 +140,7 @@ export default function PitScoutPage() {
             pit.drivetrainType === "other" && drivetrainOtherText.trim()
               ? `other|${drivetrainOtherText.trim()}`
               : pit.drivetrainType,
-          robotType:
-            pit.robotType === "custom" && robotTypeOtherText.trim()
-              ? `custom|${robotTypeOtherText.trim()}`
-              : pit.robotType,
+          robotType: pit.robotType,
           intakeType,
           shooterType:
             pit.shooterType === "other" && shooterOtherText.trim()
@@ -182,7 +175,7 @@ export default function PitScoutPage() {
     return (
       <div className="app-shell pt-4">
         <div className="card p-5">
-          <p className="text-[#1a1a2e]/80">Scout edecek takım atanmadı.</p>
+          <p className="text-[#e0e7ff]/80">Scout edecek takım atanmadı.</p>
           <Link href={`/events/${eventId}`} className="text-[#3b82f6] mt-2 inline-block">← Ana sayfa</Link>
         </div>
       </div>
@@ -201,7 +194,7 @@ export default function PitScoutPage() {
       <div className="card p-5 space-y-5">
         {step === 1 && (
           <>
-            <h2 className="font-semibold text-[#1a1a2e]">Drivetrain</h2>
+            <h2 className="font-semibold text-[#e0e7ff]">Drivetrain</h2>
             <div className="space-y-2">
               {DRIVETRAIN_OPTIONS.map((o) => (
                 <label
@@ -221,7 +214,7 @@ export default function PitScoutPage() {
             </div>
             {pit.drivetrainType === "other" && (
               <div className="pt-2">
-                <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
+                <label className="block text-sm font-medium text-[#e0e7ff] mb-1.5">
                   Diğer (Drivetrain) – ne yazayım?
                 </label>
                 <input
@@ -233,7 +226,7 @@ export default function PitScoutPage() {
                 />
               </div>
             )}
-            <h2 className="font-semibold text-[#1a1a2e] pt-2">Robot tipi</h2>
+            <h2 className="font-semibold text-[#e0e7ff] pt-2">Robot tipi</h2>
             <div className="space-y-2">
               {ROBOT_TYPE_OPTIONS.map((o) => (
                 <label
@@ -251,20 +244,6 @@ export default function PitScoutPage() {
                 </label>
               ))}
             </div>
-            {pit.robotType === "custom" && (
-              <div className="pt-2">
-                <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
-                  Özel (Robot tipi) – ne yazayım?
-                </label>
-                <input
-                  type="text"
-                  value={robotTypeOtherText}
-                  onChange={(e) => setRobotTypeOtherText(e.target.value)}
-                  placeholder="Örn: Kendi chassi, Hibrit"
-                  className="input-field"
-                />
-              </div>
-            )}
             <button
               type="button"
               onClick={() => setStep(2)}
@@ -277,27 +256,39 @@ export default function PitScoutPage() {
 
         {step === 2 && (
           <>
-            <h2 className="font-semibold text-[#1a1a2e]">Intake</h2>
+            <h2 className="font-semibold text-[#e0e7ff]">Intake</h2>
             <div className="space-y-2">
               {INTAKE_OPTIONS.map((o) => (
-                <label key={o.value} className="option-row w-full cursor-pointer">
+                <label
+                  key={o.value || "none"}
+                  className={`option-row w-full ${pit.intakeType === o.value ? "selected" : ""}`}
+                >
                   <input
-                    type="checkbox"
-                    checked={o.value === "floor" ? pit.intakeFloor : pit.intakeHP}
-                    onChange={() =>
-                      setPit((p) =>
-                        o.value === "floor"
-                          ? { ...p, intakeFloor: !p.intakeFloor }
-                          : { ...p, intakeHP: !p.intakeHP }
-                      )
-                    }
+                    type="radio"
+                    name="intake"
+                    checked={pit.intakeType === o.value}
+                    onChange={() => setPit((p) => ({ ...p, intakeType: o.value }))}
                     className="touch"
                   />
                   <span>{o.label}</span>
                 </label>
               ))}
             </div>
-            <h2 className="font-semibold text-[#1a1a2e] pt-2">Shooter</h2>
+            {pit.intakeType === "other" && (
+              <div className="pt-2">
+                <label className="block text-sm font-medium text-[#e0e7ff] mb-1.5">
+                  Özel (Intake) – ne yazayım?
+                </label>
+                <input
+                  type="text"
+                  value={intakeOtherText}
+                  onChange={(e) => setIntakeOtherText(e.target.value)}
+                  placeholder="Örn: Kendi chassi, Hibrit"
+                  className="input-field"
+                />
+              </div>
+            )}
+            <h2 className="font-semibold text-[#e0e7ff] pt-2">Shooter</h2>
             <div className="space-y-2">
               {SHOOTER_OPTIONS.map((o) => (
                 <label
@@ -317,7 +308,7 @@ export default function PitScoutPage() {
             </div>
             {pit.shooterType === "other" && (
               <div className="pt-2">
-                <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
+                <label className="block text-sm font-medium text-[#e0e7ff] mb-1.5">
                   Diğer (Shooter) – ne yazayım?
                 </label>
                 <input
@@ -329,7 +320,7 @@ export default function PitScoutPage() {
                 />
               </div>
             )}
-            <h2 className="font-semibold text-[#1a1a2e] pt-2">Tırmanma yeteneği</h2>
+            <h2 className="font-semibold text-[#e0e7ff] pt-2">Tırmanma yeteneği</h2>
             <div className="space-y-2">
               {CLIMB_CAPABILITY_OPTIONS.map((o) => (
                 <label
@@ -360,7 +351,7 @@ export default function PitScoutPage() {
 
         {step === 3 && (
           <>
-            <h2 className="font-semibold text-[#1a1a2e]">Takımın söyledikleri</h2>
+            <h2 className="font-semibold text-[#e0e7ff]">Takımın söyledikleri</h2>
             <textarea
               value={pit.teamToldUs}
               onChange={(e) => setPit((p) => ({ ...p, teamToldUs: e.target.value }))}
@@ -368,7 +359,7 @@ export default function PitScoutPage() {
               className="input-field resize-none"
               placeholder='"Auto garanti" "Hızlı cycle" vb.'
             />
-            <h2 className="font-semibold text-[#1a1a2e]">Scout gözlemleri</h2>
+            <h2 className="font-semibold text-[#e0e7ff]">Scout gözlemleri</h2>
             <textarea
               value={pit.scoutObservations}
               onChange={(e) => setPit((p) => ({ ...p, scoutObservations: e.target.value }))}
