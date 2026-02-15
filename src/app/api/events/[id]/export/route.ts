@@ -47,6 +47,7 @@ export async function GET(
       "intake",
       "shooter",
       "climb_capability",
+      "climb_system_description",
       "team_told_us",
       "scout_observations",
       "avg_auto_score",
@@ -78,6 +79,7 @@ export async function GET(
         pit?.intakeType ?? "",
         pit?.shooterType ?? "",
         pit?.climbCapability ?? "",
+        pit?.climbSystemDescription ?? "",
         pit?.teamToldUs ?? "",
         pit?.scoutObservations ?? "",
         avgAuto,
@@ -152,6 +154,7 @@ export async function GET(
     "intake",
     "shooter",
     "climb_capability",
+    "climb_system_description",
     "team_told_us",
     "scout_observations",
   ];
@@ -165,6 +168,7 @@ export async function GET(
       p.intakeType ?? "",
       p.shooterType ?? "",
       p.climbCapability ?? "",
+      p.climbSystemDescription ?? "",
       p.teamToldUs ?? "",
       p.scoutObservations ?? "",
     ]);

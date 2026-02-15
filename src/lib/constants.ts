@@ -23,10 +23,12 @@ export const SHOOTER_OPTIONS = [
   { value: "other", label: "Diğer" },
 ] as const;
 
-export const CLIMB_CAPABILITY_OPTIONS = [
+/** Pit: tırmanma seviyesi (1, 2 veya 3. seviye) */
+export const CLIMB_LEVEL_OPTIONS = [
   { value: "none", label: "Yok" },
-  { value: "low", label: "Düşük" },
-  { value: "high", label: "Yüksek" },
+  { value: "1", label: "1" },
+  { value: "2", label: "2" },
+  { value: "3", label: "3" },
 ] as const;
 
 export const RATING_1_5 = [1, 2, 3, 4, 5] as const;

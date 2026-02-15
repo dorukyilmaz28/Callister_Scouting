@@ -40,10 +40,19 @@ function LoginForm() {
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-[#0f0f23] via-[#1a1a3e] to-[#0f0f23]">
       <div className="w-full max-w-[400px] mx-auto">
         <div className="card p-6 mb-6 shadow-xl">
-          <p className="hero-tagline text-[#e0e7ff]/70 text-center mb-1">Callister 9024</p>
-          <h1 className="text-xl font-bold text-center text-[#e0e7ff] mb-0.5">
-            FRC Scouting 2026
+          <div className="flex justify-center mb-4">
+            <img
+              src="/callister-logo.png"
+              alt="Callister"
+              className="w-24 h-24 object-contain"
+            />
+          </div>
+          <h1 className="text-2xl font-bold text-center text-[#e0e7ff] mb-1">
+            Callister 9024
           </h1>
+          <p className="text-center text-[#e0e7ff]/80 text-sm mb-6">
+            Dijital scouting uygulaması
+          </p>
           <p className="text-center text-[#e0e7ff]/60 text-sm mb-6">Giriş yapın</p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

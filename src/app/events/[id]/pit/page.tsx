@@ -8,7 +8,7 @@ import {
   ROBOT_TYPE_OPTIONS,
   INTAKE_OPTIONS,
   SHOOTER_OPTIONS,
-  CLIMB_CAPABILITY_OPTIONS,
+  CLIMB_LEVEL_OPTIONS,
 } from "@/lib/constants";
 
 type Team = { id: string; number: number };
@@ -18,6 +18,7 @@ type PitData = {
   intakeType: string;
   shooterType: string;
   climbCapability: string;
+  climbSystemDescription: string;
   teamToldUs: string;
   scoutObservations: string;
 };
@@ -47,6 +48,7 @@ export default function PitScoutPage() {
     intakeType: "",
     shooterType: "",
     climbCapability: "",
+    climbSystemDescription: "",
     teamToldUs: "",
     scoutObservations: "",
   });
@@ -97,7 +99,13 @@ export default function PitScoutPage() {
             robotType: rob.base || (one.robotType ?? ""),
             intakeType: inv.base === "other" ? "other" : "",
             shooterType: sh.base || (one.shooterType ?? ""),
-            climbCapability: one.climbCapability ?? "",
+            climbCapability:
+              one.climbCapability === "low"
+                ? "1"
+                : one.climbCapability === "high"
+                  ? "3"
+                  : (one.climbCapability ?? ""),
+            climbSystemDescription: one.climbSystemDescription ?? "",
             teamToldUs: one.teamToldUs ?? "",
             scoutObservations: one.scoutObservations ?? "",
           });
@@ -111,6 +119,7 @@ export default function PitScoutPage() {
             intakeType: "",
             shooterType: "",
             climbCapability: "",
+            climbSystemDescription: "",
             teamToldUs: "",
             scoutObservations: "",
           });
@@ -147,6 +156,7 @@ export default function PitScoutPage() {
               ? `other|${shooterOtherText.trim()}`
               : pit.shooterType || null,
           climbCapability: pit.climbCapability || null,
+          climbSystemDescription: pit.climbSystemDescription?.trim() || null,
           teamToldUs: pit.teamToldUs || null,
           scoutObservations: pit.scoutObservations || null,
         }),
@@ -320,9 +330,10 @@ export default function PitScoutPage() {
                 />
               </div>
             )}
-            <h2 className="font-semibold text-[#e0e7ff] pt-2">Tırmanma yeteneği</h2>
+            <h2 className="font-semibold text-[#e0e7ff] pt-2">Tırmanma</h2>
+            <p className="text-sm text-[#e0e7ff]/80 mb-2">Hangi seviye?</p>
             <div className="space-y-2">
-              {CLIMB_CAPABILITY_OPTIONS.map((o) => (
+              {CLIMB_LEVEL_OPTIONS.map((o) => (
                 <label
                   key={o.value}
                   className={`option-row w-full ${pit.climbCapability === o.value ? "selected" : ""}`}
@@ -337,6 +348,18 @@ export default function PitScoutPage() {
                   <span>{o.label}</span>
                 </label>
               ))}
+            </div>
+            <div className="pt-2">
+              <label className="block text-sm font-medium text-[#e0e7ff] mb-1.5">
+                Tırmanma sistemi nasıl çalışıyor?
+              </label>
+              <textarea
+                value={pit.climbSystemDescription}
+                onChange={(e) => setPit((p) => ({ ...p, climbSystemDescription: e.target.value }))}
+                rows={3}
+                className="input-field resize-none"
+                placeholder="Örn: Kanca ile yukarı çekiliyor, piston ile kilitleniyor"
+              />
             </div>
             <div className="flex gap-2 mt-4">
               <button type="button" onClick={() => setStep(1)} className="btn-primary flex-1 bg-[#4b5563]">

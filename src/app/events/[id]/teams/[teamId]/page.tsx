@@ -12,6 +12,7 @@ type Summary = {
     intakeType: string | null;
     shooterType: string | null;
     climbCapability: string | null;
+    climbSystemDescription: string | null;
     teamToldUs: string | null;
     scoutObservations: string | null;
   } | null;
@@ -110,7 +111,10 @@ export default function TeamSummaryPage() {
             <div><dt className="text-gray-500">Robot tipi</dt><dd className="font-medium">{pit.robotType}</dd></div>
             {pit.intakeType && <div><dt className="text-gray-500">Intake</dt><dd>{pit.intakeType}</dd></div>}
             {pit.shooterType && <div><dt className="text-gray-500">Shooter</dt><dd>{pit.shooterType}</dd></div>}
-            {pit.climbCapability && <div><dt className="text-gray-500">Climb</dt><dd>{pit.climbCapability}</dd></div>}
+            {pit.climbCapability && <div><dt className="text-gray-500">Tırmanma (seviye)</dt><dd>{pit.climbCapability}</dd></div>}
+            {pit.climbSystemDescription && (
+              <div><dt className="text-gray-500">Tırmanma sistemi</dt><dd className="whitespace-pre-wrap">{pit.climbSystemDescription}</dd></div>
+            )}
             {pit.teamToldUs && (
               <div><dt className="text-gray-500">Takımın söyledikleri</dt><dd className="whitespace-pre-wrap">{pit.teamToldUs}</dd></div>
             )}

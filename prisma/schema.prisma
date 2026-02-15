@@ -88,8 +88,9 @@ model PitScout {
   robotType         String   @map("robot_type")       // kitbot, custom
   intakeType        String?  @map("intake_type")
   shooterType       String?  @map("shooter_type")
-  climbCapability   String?  @map("climb_capability")
-  teamToldUs        String?  @map("team_told_us")     @db.Text
+  climbCapability       String?  @map("climb_capability")   // none, 1, 2, 3
+  climbSystemDescription String?  @map("climb_system_description") @db.Text
+  teamToldUs            String?  @map("team_told_us")       @db.Text
   scoutObservations String? @map("scout_observations") @db.Text
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")

@@ -74,6 +74,7 @@ export async function POST(request: Request) {
       intakeType,
       shooterType,
       climbCapability,
+      climbSystemDescription,
       teamToldUs,
       scoutObservations,
     } = body;
@@ -104,6 +105,7 @@ export async function POST(request: Request) {
         intakeType: intakeType ?? null,
         shooterType: shooterType ?? null,
         climbCapability: climbCapability ?? null,
+        climbSystemDescription: climbSystemDescription ?? null,
         teamToldUs: teamToldUs ?? null,
         scoutObservations: scoutObservations ?? null,
       },
@@ -113,6 +115,7 @@ export async function POST(request: Request) {
         intakeType: intakeType ?? null,
         shooterType: shooterType ?? null,
         climbCapability: climbCapability ?? null,
+        climbSystemDescription: climbSystemDescription ?? null,
         teamToldUs: teamToldUs ?? null,
         scoutObservations: scoutObservations ?? null,
       },
