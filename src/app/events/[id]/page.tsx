@@ -22,8 +22,8 @@ export default function EventAnaSayfa() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/events/${id}/dashboard`).then((r) => (r.ok ? r.json() : { teams: [], user: null, eventName: null })),
-      fetch(`/api/events/${id}/teams`).then((r) => (r.ok ? r.json() : [])),
+      fetch(`/api/events/${id}/dashboard`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : { teams: [], user: null, eventName: null })),
+      fetch(`/api/events/${id}/teams`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])),
     ]).then(([dash, allTeams]) => {
       setUser(dash.user ?? null);
       setTeams(dash.teams ?? []);
@@ -54,9 +54,19 @@ export default function EventAnaSayfa() {
         if (!r.ok) return r.json().then((d) => Promise.reject(new Error(d.error ?? "Kaydedilemedi")));
         return r.json();
       })
-      .then(() => {
+      .then((assignments) => {
         setMyAssignMsg({ ok: true, text: "Kaydedildi." });
-        return fetch(`/api/events/${id}/dashboard`).then((r) => (r.ok ? r.json() : { teams: [] }));
+        const fromPut = Array.isArray(assignments)
+          ? assignments.map((a: { teamId: string; team: { number: number; name?: string | null } }) => ({
+              teamId: a.teamId,
+              teamNumber: a.team.number,
+              teamName: a.team?.name ?? null,
+              pitDone: false,
+              matchCount: 0,
+            }))
+          : [];
+        setTeams(fromPut);
+        return fetch(`/api/events/${id}/dashboard`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : { teams: [] }));
       })
       .then((dash) => {
         if (dash?.teams) setTeams(dash.teams);
