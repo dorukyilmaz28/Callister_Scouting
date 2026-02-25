@@ -13,6 +13,8 @@ type Event = {
   _count?: { matches: number };
 };
 
+type TBAEvent = { key: string; name: string; start_date?: string };
+
 type User = { role: string };
 
 export default function EventsPage() {
@@ -20,21 +22,64 @@ export default function EventsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [tbaOpen, setTbaOpen] = useState(false);
+  const [tbaYear, setTbaYear] = useState(new Date().getFullYear().toString());
+  const [tbaEvents, setTbaEvents] = useState<TBAEvent[]>([]);
+  const [tbaLoading, setTbaLoading] = useState(false);
+  const [tbaAdding, setTbaAdding] = useState(false);
+  const [tbaError, setTbaError] = useState("");
+
+  function loadEvents() {
+    return fetch("/api/events")
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load");
+        return r.json();
+      })
+      .then(setEvents);
+  }
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.json()).then((d) => setUser(d.user ?? null));
   }, []);
 
   useEffect(() => {
-    fetch("/api/events")
-      .then((r) => {
-        if (!r.ok) throw new Error("Failed to load");
-        return r.json();
-      })
-      .then(setEvents)
+    loadEvents()
       .catch(() => setError("Etkinlikler yüklenemedi."))
       .finally(() => setLoading(false));
   }, []);
+
+  function loadTbaEvents() {
+    setTbaError("");
+    setTbaLoading(true);
+    fetch(`/api/tba/events?year=${tbaYear}`)
+      .then((r) => {
+        if (!r.ok) throw new Error("TBA listesi alınamadı");
+        return r.json();
+      })
+      .then(setTbaEvents)
+      .catch(() => setTbaError("TBA etkinlikleri yüklenemedi. API key kontrol edin."))
+      .finally(() => setTbaLoading(false));
+  }
+
+  function addFromTba(eventKey: string) {
+    setTbaError("");
+    setTbaAdding(true);
+    fetch("/api/events/from-tba", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventKey }),
+    })
+      .then((r) => {
+        if (!r.ok) return r.json().then((d) => Promise.reject(new Error(d.error ?? "Eklenemedi")));
+        return r.json();
+      })
+      .then((added) => {
+        setEvents((prev) => [added, ...prev]);
+        setTbaOpen(false);
+      })
+      .catch((err) => setTbaError(err.message ?? "Etkinlik eklenemedi"))
+      .finally(() => setTbaAdding(false));
+  }
 
   if (loading) {
     return (
@@ -57,18 +102,76 @@ export default function EventsPage() {
     <div className="app-shell pt-4">
       <div className="flex items-center justify-between gap-2 flex-wrap mb-4">
         <h1 className="text-lg font-semibold text-[#f0f0f0]">Etkinlikler</h1>
-        {user?.role === "admin" && (
-          <Link
-            href="/events/new"
-            className="py-3 px-4 text-sm font-medium rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb]"
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => { setTbaOpen(true); setTbaEvents([]); setTbaError(""); }}
+            className="py-3 px-4 text-sm font-medium rounded-lg bg-[#6366f1] text-white hover:bg-[#4f46e5]"
           >
-            Etkinlik oluştur
-          </Link>
-        )}
+            TBA&apos;dan regional ekle
+          </button>
+          {user?.role === "admin" && (
+            <Link
+              href="/events/new"
+              className="py-3 px-4 text-sm font-medium rounded-lg bg-[#3b82f6] text-white hover:bg-[#2563eb]"
+            >
+              Etkinlik oluştur
+            </Link>
+          )}
+        </div>
       </div>
+
+      {tbaOpen && (
+        <div className="card p-4 mb-4">
+          <h2 className="font-semibold text-[#e0e7ff] mb-2">Blue Alliance&apos;dan etkinlik seç</h2>
+          <div className="flex gap-2 mb-3">
+            <input
+              type="number"
+              value={tbaYear}
+              onChange={(e) => setTbaYear(e.target.value)}
+              min={2020}
+              max={2030}
+              className="input-field w-24"
+            />
+            <button
+              type="button"
+              onClick={loadTbaEvents}
+              disabled={tbaLoading}
+              className="btn-primary"
+            >
+              {tbaLoading ? "Yükleniyor…" : "Listele"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTbaOpen(false)}
+              className="py-2 px-4 rounded-lg border border-[#4b5563] text-[#e0e7ff]"
+            >
+              Kapat
+            </button>
+          </div>
+          {tbaError && <p className="text-red-500 text-sm mb-2">{tbaError}</p>}
+          {tbaEvents.length > 0 && (
+            <ul className="max-h-64 overflow-y-auto space-y-1">
+              {tbaEvents.map((ev) => (
+                <li key={ev.key}>
+                  <button
+                    type="button"
+                    onClick={() => addFromTba(ev.key)}
+                    disabled={tbaAdding}
+                    className="w-full text-left py-2 px-3 rounded-lg hover:bg-[#3730a3]/40 text-[#e0e7ff]"
+                  >
+                    {ev.name} ({ev.key})
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {events.length === 0 ? (
         <div className="card p-5">
-          <p className="text-[#e0e7ff]/90">Henüz etkinlik yok. Yönetici oluşturabilir.</p>
+          <p className="text-[#e0e7ff]/90">Henüz etkinlik yok. TBA&apos;dan ekleyin veya yönetici oluştursun.</p>
         </div>
       ) : (
         <ul className="space-y-3">

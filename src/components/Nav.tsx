@@ -19,6 +19,8 @@ export default function Nav() {
     <nav className="flex flex-wrap gap-2 p-3 bg-white border-b border-gray-200">
       {link("/", "Ana sayfa")}
       {link("/events", "Etkinlikler")}
+      {link("/team-members", "Takım üyeleri")}
+      {link("/team-feed", "Maç verisi paylaşımı")}
       <Link
         href="/api/auth/logout"
         className="block py-3 px-4 text-lg font-medium rounded-lg bg-gray-200 text-gray-800"

@@ -18,8 +18,11 @@ enum Role {
 
 model User {
   id           String   @id @default(cuid())
-  name         String   @unique
-  passwordHash String  @map("password_hash")
+  name         String?  @unique // legacy; new users get name = fullName
+  email        String?  @unique
+  fullName     String?  @map("full_name")
+  teamNumber   Int?     @map("team_number")
+  passwordHash String   @map("password_hash")
   role         Role     @default(scout)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -27,21 +30,38 @@ model User {
   scoutAssignments ScoutAssignment[]
   pitScouts        PitScout[]
   matchScouts      MatchScout[]
+  matchDataPosts   MatchDataPost[]
+}
+
+// Takım bazlı maç verisi görsel paylaşımı (grup duvarı)
+model MatchDataPost {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  teamNumber Int      @map("team_number")
+  eventId    String?  @map("event_id")
+  imageUrl   String   @map("image_url")
+  caption    String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([teamNumber])
 }
 
 model Event {
-  id        String   @id @default(cuid())
-  name      String
-  code      String   @unique // e.g. "2026txcmp"
-  startDate DateTime @map("start_date")
-  endDate   DateTime @map("end_date")
-  createdAt DateTime @default(now()) @map("created_at")
+  id           String    @id @default(cuid())
+  name         String
+  code         String    @unique // e.g. "2026txcmp"
+  tbaEventKey  String?   @unique @map("tba_event_key") // TBA event key e.g. "2025istanbul"
+  startDate    DateTime  @map("start_date")
+  endDate      DateTime  @map("end_date")
+  createdAt    DateTime  @default(now()) @map("created_at")
 
-  eventTeams      EventTeam[]
-  scoutAssignments ScoutAssignment[]
-  pitScouts       PitScout[]
-  matches        Match[]
-  matchScouts    MatchScout[]
+  eventTeams       EventTeam[]
+  scoutAssignments  ScoutAssignment[]
+  pitScouts        PitScout[]
+  matches          Match[]
+  matchScouts      MatchScout[]
 }
 
 model Team {

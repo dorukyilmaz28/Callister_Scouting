@@ -1,38 +1,42 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
-import { requireRole } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
-    await requireRole("admin");
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-  try {
     const body = await request.json();
-    const { name, password, role } = body;
-    if (!name || !password || !role) {
+    const { email, fullName, teamNumber, password } = body;
+    if (!email || !fullName || teamNumber == null || teamNumber === "" || !password) {
       return NextResponse.json(
-        { error: "İsim, şifre ve rol gerekli" },
+        { error: "E-posta, ad soyad, takım numarası ve şifre gerekli" },
         { status: 400 }
       );
     }
-    const validRoles = ["admin", "scout", "strategy"];
-    if (!validRoles.includes(role)) {
-      return NextResponse.json({ error: "Geçersiz rol" }, { status: 400 });
+    const em = String(email).trim().toLowerCase();
+    const tn = typeof teamNumber === "number" ? teamNumber : parseInt(String(teamNumber), 10);
+    if (Number.isNaN(tn) || tn < 1 || tn > 99999) {
+      return NextResponse.json(
+        { error: "Geçerli bir takım numarası girin (1–99999)" },
+        { status: 400 }
+      );
     }
-    const nm = String(name).trim();
-    const existing = await prisma.user.findUnique({ where: { name: nm } });
+    const existing = await prisma.user.findUnique({ where: { email: em } });
     if (existing) {
-      return NextResponse.json({ error: "Bu isim zaten kayıtlı" }, { status: 400 });
+      return NextResponse.json({ error: "Bu e-posta adresi zaten kayıtlı" }, { status: 400 });
     }
-    const passwordHash = await hashPassword(password);
+    const passwordHash = await hashPassword(String(password));
     const user = await prisma.user.create({
-      data: { name: nm, passwordHash, role },
+      data: {
+        email: em,
+        fullName: String(fullName).trim(),
+        teamNumber: tn,
+        name: String(fullName).trim(),
+        passwordHash,
+        role: "scout",
+      },
     });
     return NextResponse.json({
-      user: { id: user.id, name: user.name, role: user.role },
+      user: { id: user.id, email: user.email, fullName: user.fullName, teamNumber: user.teamNumber, role: user.role },
     });
   } catch (e) {
     return NextResponse.json({ error: "Kayıt başarısız" }, { status: 500 });

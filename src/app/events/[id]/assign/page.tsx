@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
-type User = { id: string; name: string; role: string };
+type User = { id: string; name: string | null; fullName: string | null; email: string | null; role: string };
 type Team = { id: string; number: number };
 type Assignment = { userId: string; teamId: string; team: { number: number }; user?: { name: string } };
 
@@ -110,7 +110,7 @@ export default function AssignPage() {
           <option value="">Scout seçin</option>
           {users.map((u) => (
             <option key={u.id} value={u.id}>
-              {u.name}
+              {u.fullName ?? u.name ?? u.email ?? u.id}
             </option>
           ))}
         </select>
@@ -166,7 +166,9 @@ export default function AssignPage() {
             {Object.entries(
               assignments.reduce(
                 (acc, a) => {
-                  const key = a.user?.name ?? users.find((x) => x.id === a.userId)?.name ?? a.userId;
+                  const u = users.find((x) => x.id === a.userId);
+                  const uu = a.user as { fullName?: string; name?: string } | undefined;
+                  const key = uu?.fullName ?? uu?.name ?? u?.fullName ?? u?.name ?? u?.email ?? a.userId;
                   if (!acc[key]) acc[key] = [];
                   acc[key].push(a.team.number);
                   return acc;

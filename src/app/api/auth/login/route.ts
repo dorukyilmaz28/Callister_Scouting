@@ -4,16 +4,16 @@ import { login } from "@/lib/auth";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, password } = body;
-    if (!name || !password) {
+    const { email, password } = body;
+    if (!email || !password) {
       return NextResponse.json(
-        { error: "İsim ve şifre gerekli" },
+        { error: "E-posta ve şifre gerekli" },
         { status: 400 }
       );
     }
-    const user = await login(String(name).trim(), String(password));
+    const user = await login(String(email).trim(), String(password));
     if (!user) {
-      return NextResponse.json({ error: "İsim veya şifre hatalı" }, { status: 401 });
+      return NextResponse.json({ error: "E-posta veya şifre hatalı" }, { status: 401 });
     }
     return NextResponse.json({ user });
   } catch (e) {

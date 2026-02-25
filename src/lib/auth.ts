@@ -19,7 +19,10 @@ export type Role = "admin" | "scout" | "strategy";
 
 export type SessionUser = {
   id: string;
-  name: string;
+  name: string | null;
+  email: string | null;
+  fullName: string | null;
+  teamNumber: number | null;
   role: Role;
 };
 
@@ -70,14 +73,22 @@ export async function destroySession(): Promise<void> {
   cookieStore.delete(COOKIE_NAME);
 }
 
-export async function login(name: string, password: string): Promise<SessionUser | null> {
-  const user = await prisma.user.findUnique({ where: { name: name.trim() } });
+export async function login(emailOrName: string, password: string): Promise<SessionUser | null> {
+  const key = emailOrName.trim();
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [{ email: key }, { name: key }],
+    },
+  });
   if (!user) return null;
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) return null;
   const sessionUser: SessionUser = {
     id: user.id,
     name: user.name,
+    email: user.email,
+    fullName: user.fullName,
+    teamNumber: user.teamNumber,
     role: user.role as Role,
   };
   await createSession(sessionUser);

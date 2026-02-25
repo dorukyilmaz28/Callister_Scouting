@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# uploaded match data images
+/public/uploads
+
 # production
 /build
 
