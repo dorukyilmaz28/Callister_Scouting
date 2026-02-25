@@ -102,7 +102,14 @@ export default function EventsPage() {
     <div className="app-shell pt-4">
       <div className="flex items-center justify-between gap-2 flex-wrap mb-4">
         <h1 className="text-lg font-semibold text-[#f0f0f0]">Etkinlikler</h1>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/profile"
+            className="text-sm text-[#e0e7ff]/90 hover:text-[#e0e7ff] font-medium"
+          >
+            Profil
+          </Link>
+          <div className="flex gap-2">
           <button
             type="button"
             onClick={() => { setTbaOpen(true); setTbaEvents([]); setTbaError(""); }}
@@ -118,6 +125,7 @@ export default function EventsPage() {
               Etkinlik oluştur
             </Link>
           )}
+          </div>
         </div>
       </div>
 

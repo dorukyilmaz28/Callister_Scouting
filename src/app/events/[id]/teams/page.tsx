@@ -12,16 +12,21 @@ export default function TeamsListPage() {
   const eventId = params.id as string;
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isScout, setIsScout] = useState(false);
 
   useEffect(() => {
     Promise.all([
       fetch(`/api/events/${eventId}/teams`).then((r) => (r.ok ? r.json() : [])),
       fetch(`/api/events/${eventId}/assignments`).then((r) => (r.ok ? r.json() : [])),
-    ]).then(([allTeams, assignments]) => {
+      fetch("/api/auth/me").then((r) => r.json().then((d) => d.user?.role === "scout")),
+    ]).then(([allTeams, assignments, scout]) => {
+      setIsScout(!!scout);
       const assignmentTeamIds = (assignments as Assignment[]).map((a) => a.teamId);
       const mine = assignmentTeamIds.length > 0
         ? (allTeams as Team[]).filter((t) => assignmentTeamIds.includes(t.id))
-        : (allTeams as Team[]);
+        : scout
+          ? []
+          : (allTeams as Team[]);
       setTeams(mine);
       setLoading(false);
     });
@@ -29,17 +34,28 @@ export default function TeamsListPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-12">
-        <p className="text-gray-600">Takımlar yükleniyor…</p>
+      <div className="app-shell flex justify-center py-12">
+        <p className="text-[#e0e7ff]/80">Takımlar yükleniyor…</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900">Takımlar</h1>
+    <div className="app-shell pt-4">
+      <h1 className="text-xl font-bold text-[#f0f0f0] mb-4">Takımlar · Verilere bak</h1>
       {teams.length === 0 ? (
-        <p className="text-gray-600">Bu etkinlikte takım yok.</p>
+        <div className="card p-5">
+          {isScout ? (
+            <p className="text-[#e0e7ff]/90">
+              Scout yapacağınız takımlar henüz seçilmedi. Ana sayfadan &quot;Scout yapacağım takımları seç&quot; ile takımlarınızı seçin; burada sadece onların verilerini görebilirsiniz.
+            </p>
+          ) : (
+            <p className="text-[#e0e7ff]/80">Bu etkinlikte takım yok.</p>
+          )}
+          {isScout && (
+            <Link href={`/events/${eventId}`} className="text-[#3b82f6] mt-2 inline-block">← Ana sayfa</Link>
+          )}
+        </div>
       ) : (
         <ul className="space-y-2">
           {teams.map((t) => (
@@ -48,10 +64,11 @@ export default function TeamsListPage() {
                 href={`/events/${eventId}/teams/${t.id}`}
                 className="block card p-4 hover:border-[#6366f1]/60 transition-colors"
               >
-                <span className="font-semibold text-gray-900">{t.number}</span>
-                {t.name && (
-                  <span className="text-gray-600 ml-2">{t.name}</span>
-                )}
+                <span className="font-semibold text-[#e0e7ff]">Team {t.number}</span>
+                {t.name ? (
+                  <span className="text-[#e0e7ff]/85 ml-1"> – {t.name}</span>
+                ) : null}
+                <p className="text-sm text-[#e0e7ff]/60 mt-1">Verilere bak →</p>
               </Link>
             </li>
           ))}

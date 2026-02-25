@@ -73,7 +73,7 @@ export default function EventsLayout({
             {navLink(`/events/${eventId}`, "Ana")}
             {navLink(`/events/${eventId}/pit`, "Pit")}
             {navLink(`/events/${eventId}/match`, "Match")}
-            {navLink(`/events/${eventId}/teams`, "Takımlar")}
+            {navLink(`/events/${eventId}/teams`, "Takımlar / Veriler")}
             {(user.role === "admin" || user.role === "strategy") && (
               <>
                 {navLink(`/events/${eventId}/assign`, "Ata")}

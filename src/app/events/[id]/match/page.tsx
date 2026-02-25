@@ -59,7 +59,7 @@ function Stepper({ value, onChange, min = 0 }: { value: number; onChange: (n: nu
   );
 }
 
-type TeamOption = { teamId: string; teamNumber: number };
+type TeamOption = { teamId: string; teamNumber: number; teamName: string | null };
 
 export default function MatchScoutPage() {
   const params = useParams();
@@ -78,21 +78,21 @@ export default function MatchScoutPage() {
   const [climbTypeOtherText, setClimbTypeOtherText] = useState("");
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/events/${eventId}/dashboard`).then((r) => (r.ok ? r.json() : { teams: [] })),
-      fetch(`/api/events/${eventId}/teams`).then((r) => (r.ok ? r.json() : [])),
-    ]).then(([dash, allTeams]) => {
-      const assigned = (dash.teams ?? []) as { teamId: string; teamNumber: number }[];
-      if (assigned.length > 0) {
-        setTeamOptions(assigned.map((t) => ({ teamId: t.teamId, teamNumber: t.teamNumber })));
+    fetch(`/api/events/${eventId}/dashboard`)
+      .then((r) => (r.ok ? r.json() : { teams: [] }))
+      .then((dash) => {
+        const assigned = (dash.teams ?? []) as { teamId: string; teamNumber: number; teamName?: string | null }[];
+        setTeamOptions(
+          assigned.map((t) => ({
+            teamId: t.teamId,
+            teamNumber: t.teamNumber,
+            teamName: t.teamName ?? null,
+          }))
+        );
         if (!teamNumber && assigned[0]) setTeamNumber(String(assigned[0].teamNumber));
-      } else {
-        const list = (allTeams as { id: string; number: number }[]) ?? [];
-        setTeamOptions(list.map((t) => ({ teamId: t.id, teamNumber: t.number })));
-        if (!teamNumber && list[0]) setTeamNumber(String(list[0].number));
-      }
-      setTeamsLoaded(true);
-    });
+        setTeamsLoaded(true);
+      })
+      .catch(() => setTeamsLoaded(true));
   }, [eventId]);
 
   useEffect(() => {

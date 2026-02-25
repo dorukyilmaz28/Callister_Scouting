@@ -25,12 +25,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Bu e-posta adresi zaten kayıtlı" }, { status: 400 });
     }
     const passwordHash = await hashPassword(String(password));
+    const fullNameStr = String(fullName).trim();
     const user = await prisma.user.create({
       data: {
         email: em,
-        fullName: String(fullName).trim(),
+        fullName: fullNameStr,
         teamNumber: tn,
-        name: String(fullName).trim(),
+        name: em,
         passwordHash,
         role: "scout",
       },
@@ -39,6 +40,10 @@ export async function POST(request: Request) {
       user: { id: user.id, email: user.email, fullName: user.fullName, teamNumber: user.teamNumber, role: user.role },
     });
   } catch (e) {
-    return NextResponse.json({ error: "Kayıt başarısız" }, { status: 500 });
+    const message = e instanceof Error ? e.message : "Kayıt başarısız";
+    return NextResponse.json(
+      { error: process.env.NODE_ENV === "development" ? message : "Kayıt başarısız" },
+      { status: 500 }
+    );
   }
 }

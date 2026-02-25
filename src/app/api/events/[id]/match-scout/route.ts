@@ -100,6 +100,18 @@ export async function POST(request: Request) {
       update: {},
     });
 
+    if (session.role === "scout") {
+      const assigned = await prisma.scoutAssignment.findFirst({
+        where: { eventId, userId: session.id, teamId: team.id },
+      });
+      if (!assigned) {
+        return NextResponse.json(
+          { error: "Bu takım size atanmadı. Sadece seçtiğiniz takımlar için maç girişi yapabilirsiniz." },
+          { status: 403 }
+        );
+      }
+    }
+
     await prisma.eventTeam.upsert({
       where: { eventId_teamId: { eventId, teamId: team.id } },
       create: { eventId, teamId: team.id },

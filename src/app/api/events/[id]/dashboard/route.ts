@@ -27,6 +27,7 @@ export async function GET(
         return {
           teamId: a.teamId,
           teamNumber: a.team.number,
+          teamName: a.team.name ?? null,
           pitDone: !!pit,
           matchCount,
         };
