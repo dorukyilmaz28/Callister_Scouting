@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import html2canvas from "html2canvas";
+import domtoimage from "dom-to-image";
 import {
   BarChart,
   Bar,
@@ -116,21 +117,40 @@ export default function TeamSummaryPage() {
     return lines.join("\n");
   }
 
+  function downloadPng(dataUrl: string) {
+    const link = document.createElement("a");
+    link.download = `team-${team.number}-veriler.png`;
+    link.href = dataUrl;
+    link.click();
+    setImageDone(true);
+    setTimeout(() => setImageDone(false), 2000);
+  }
+
   async function handleDownloadImage() {
     if (!downloadRef.current) return;
+    setShareError(null);
+    const el = downloadRef.current;
+    await new Promise((r) => setTimeout(r, 400));
+
     try {
-      const canvas = await html2canvas(downloadRef.current, {
-        backgroundColor: "#1a1e2e",
-        scale: 2,
+      const dataUrl = await domtoimage.toPng(el, {
+        bgcolor: "#1a1e2e",
+        style: { backgroundColor: "#1a1e2e" },
+        quality: 1,
       });
-      const link = document.createElement("a");
-      link.download = `team-${team.number}-veriler.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-      setImageDone(true);
-      setTimeout(() => setImageDone(false), 2000);
+      downloadPng(dataUrl);
     } catch {
-      setShareError("Görsel indirilemedi.");
+      try {
+        const canvas = await html2canvas(el, {
+          backgroundColor: "#1a1e2e",
+          scale: 1.5,
+          logging: false,
+        });
+        downloadPng(canvas.toDataURL("image/png"));
+      } catch (e) {
+        console.error("PNG export", e);
+        setShareError("PNG indirilemedi. Sayfayı yenileyip tekrar deneyin.");
+      }
     }
   }
 
