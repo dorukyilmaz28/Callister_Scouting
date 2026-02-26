@@ -19,6 +19,8 @@ export default function EventAnaSayfa() {
   const [myAssignMsg, setMyAssignMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [eventName, setEventName] = useState<string | null>(null);
+  const [syncTeamsLoading, setSyncTeamsLoading] = useState(false);
+  const [syncTeamsError, setSyncTeamsError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -40,6 +42,20 @@ export default function EventAnaSayfa() {
       if (prev.length >= 2) return prev;
       return [...prev, teamId];
     });
+  }
+
+  function syncTeamsFromTba() {
+    setSyncTeamsError(null);
+    setSyncTeamsLoading(true);
+    fetch(`/api/events/${id}/sync-teams-from-tba`, { method: "POST" })
+      .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
+      .then(({ ok, data }) => {
+        if (!ok) throw new Error(data?.error ?? "Yüklenemedi");
+        const list = data?.eventTeams ?? [];
+        setEventTeams(list.map((et: { team: { id: string; number: number } }) => ({ id: et.team.id, number: et.team.number })));
+      })
+      .catch((err) => setSyncTeamsError(err.message ?? "TBA'dan takımlar yüklenemedi."))
+      .finally(() => setSyncTeamsLoading(false));
   }
 
   function saveMyAssignments() {
@@ -95,6 +111,24 @@ export default function EventAnaSayfa() {
           <p className="text-[#f0f0f0]/70 text-sm">{eventName}</p>
         )}
       </header>
+
+      {eventTeams.length === 0 && (
+        <div className="card p-4 mb-6">
+          <h2 className="font-semibold text-[#e0e7ff] mb-2">Takım listesi yok</h2>
+          <p className="text-[#e0e7ff]/80 text-sm mb-3">
+            Bu etkinlik TBA’dan eklendiyse, aşağıdaki düğme ile takım listesini yükleyebilirsiniz. Ardından scout yapacağınız takımları seçebilirsiniz.
+          </p>
+          {syncTeamsError && <p className="text-red-400 text-sm mb-2">{syncTeamsError}</p>}
+          <button
+            type="button"
+            onClick={syncTeamsFromTba}
+            disabled={syncTeamsLoading}
+            className="btn-primary"
+          >
+            {syncTeamsLoading ? "Yükleniyor…" : "Takımları TBA'dan yükle"}
+          </button>
+        </div>
+      )}
 
       {user?.role === "scout" && eventTeams.length > 0 && (
         <div className="card p-4 mb-6">

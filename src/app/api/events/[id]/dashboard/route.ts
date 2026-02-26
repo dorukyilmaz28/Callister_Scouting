@@ -9,10 +9,14 @@ export async function GET(
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const userId = session.id;
+    if (!userId) return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+
     const { id: eventId } = await params;
+    if (!eventId) return NextResponse.json({ error: "Event id required" }, { status: 400 });
 
     const assignments = await prisma.scoutAssignment.findMany({
-      where: { eventId, userId: session.id },
+      where: { eventId, userId },
       include: { team: true },
     });
 
@@ -41,6 +45,12 @@ export async function GET(
 
     return NextResponse.json({ user: session, teams, eventName: event?.name ?? null });
   } catch (e) {
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    console.error("[dashboard]", e);
+    const message = e instanceof Error ? e.message : "Failed";
+    const isDev = process.env.NODE_ENV === "development";
+    return NextResponse.json(
+      { error: "Failed", ...(isDev && { detail: message }) },
+      { status: 500 }
+    );
   }
 }
