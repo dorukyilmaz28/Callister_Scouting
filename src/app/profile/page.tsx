@@ -112,11 +112,16 @@ export default function ProfilePage() {
       )}
 
       <div className="mt-6">
-        <form action="/api/auth/logout" method="POST" className="inline">
-          <button type="submit" className="text-sm text-[#e0e7ff]/70 hover:text-red-400">
-            Çıkış yap
-          </button>
-        </form>
+        <button
+          type="button"
+          onClick={async () => {
+            await fetch("/api/auth/logout", { method: "POST" });
+            window.location.href = "/login";
+          }}
+          className="text-sm text-[#e0e7ff]/70 hover:text-red-400"
+        >
+          Çıkış yap
+        </button>
       </div>
     </div>
   );

@@ -11,21 +11,35 @@ type Post = {
   userFullName: string | null;
 };
 
+type TeamMember = { id: string; fullName: string | null; email: string | null };
+
 export default function TeamFeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [teamNumber, setTeamNumber] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [noTeam, setNoTeam] = useState(false);
   const [caption, setCaption] = useState("");
 
   function load() {
-    fetch("/api/team-feed")
-      .then((r) => {
-        if (!r.ok) throw new Error("Yüklenemedi");
-        return r.json();
+    Promise.all([
+      fetch("/api/team-feed").then((r) => {
+        if (r.status === 403) setNoTeam(true);
+        return r.ok ? r.json() : [];
+      }),
+      fetch("/api/team-members").then((r) => (r.ok ? r.json() : [])),
+      fetch("/api/auth/me").then((r) => (r.ok ? r.json() : { user: null })).then((d) => {
+        if (d?.user?.teamNumber != null) setTeamNumber(d.user.teamNumber);
+        return d;
+      }),
+    ])
+      .then(([postsData, membersData]) => {
+        setPosts(Array.isArray(postsData) ? postsData : []);
+        setMembers(Array.isArray(membersData) ? membersData : []);
       })
-      .then(setPosts)
-      .catch(() => setError("Paylaşımlar yüklenemedi."))
+      .catch(() => setError("Yüklenemedi."))
       .finally(() => setLoading(false));
   }
 
@@ -68,13 +82,44 @@ export default function TeamFeedPage() {
     );
   }
 
+  if (noTeam || (teamNumber == null && members.length === 0 && posts.length === 0)) {
+    return (
+      <div className="app-shell pt-4">
+        <h1 className="text-lg font-semibold text-[#f0f0f0] mb-4">Takım sohbeti</h1>
+        <div className="card p-5">
+          <p className="text-[#e0e7ff]/90">
+            Takım sohbeti için hesabınızda takım numarası (9024) tanımlı olmalı. Profil veya yönetici ile güncelleyin.
+          </p>
+          <Link href="/events" className="text-[#6366f1] font-medium mt-3 inline-block">← Etkinliklere dön</Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell pt-4">
-      <h1 className="text-lg font-semibold text-[#f0f0f0] mb-2">Maç verisi paylaşımı</h1>
+      <h1 className="text-lg font-semibold text-[#f0f0f0] mb-1">
+        Takım sohbeti {teamNumber != null ? `· Team ${teamNumber}` : ""}
+      </h1>
       <p className="text-[#e0e7ff]/70 text-sm mb-4">
-        Sadece maç verisi görüntüleri (PNG/JPEG) paylaşılabilir. Takımınızla görünür.
+        Aynı takımdaki üyeleri görün, maç sonuçları ve görseller paylaşın.
       </p>
 
+      {members.length > 0 && (
+        <div className="card p-4 mb-6">
+          <h2 className="font-semibold text-[#e0e7ff] text-sm mb-3">Takım üyeleri</h2>
+          <ul className="flex flex-wrap gap-2">
+            {members.map((m) => (
+              <li key={m.id} className="px-3 py-2 rounded-lg bg-[#2d2d44] text-[#e0e7ff] text-sm">
+                {m.fullName ?? "—"}
+                {m.email && <span className="text-[#e0e7ff]/60 ml-1">({m.email})</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <h2 className="font-semibold text-[#e0e7ff] text-sm mb-2">Maç sonuçları & paylaşımlar</h2>
       <div className="card p-4 mb-6">
         <form onSubmit={handleUpload} className="space-y-3">
           <div>
@@ -93,7 +138,7 @@ export default function TeamFeedPage() {
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button type="submit" disabled={uploading} className="btn-primary w-full">
-            {uploading ? "Yükleniyor…" : "Görsel yükle"}
+            {uploading ? "Yükleniyor…" : "Görsel / maç sonucu paylaş"}
           </button>
         </form>
       </div>
@@ -122,7 +167,7 @@ export default function TeamFeedPage() {
       )}
 
       <p className="mt-4 text-sm">
-        <Link href="/events" className="text-[#3b82f6]">← Etkinliklere dön</Link>
+        <Link href="/events" className="text-[#6366f1] font-medium">← Etkinliklere dön</Link>
       </p>
     </div>
   );

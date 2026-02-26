@@ -104,6 +104,12 @@ export default function EventsPage() {
         <h1 className="text-lg font-semibold text-[#f0f0f0]">Etkinlikler</h1>
         <div className="flex items-center gap-3">
           <Link
+            href="/team-feed"
+            className="text-sm text-[#e0e7ff]/90 hover:text-[#e0e7ff] font-medium"
+          >
+            Takım sohbeti
+          </Link>
+          <Link
             href="/profile"
             className="text-sm text-[#e0e7ff]/90 hover:text-[#e0e7ff] font-medium"
           >

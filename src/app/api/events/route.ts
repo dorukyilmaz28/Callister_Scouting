@@ -4,23 +4,32 @@ import { getSession, requireRole } from "@/lib/auth";
 
 export async function GET() {
   try {
-    await getSession();
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const userId = session.id;
+    const events = await prisma.event.findMany({
+      where: {
+        OR: [
+          { createdByUserId: userId },
+          { scoutAssignments: { some: { userId } } },
+        ],
+      },
+      orderBy: { startDate: "desc" },
+      include: {
+        eventTeams: { include: { team: true } },
+        _count: { select: { matches: true } },
+      },
+    });
+    return NextResponse.json(events);
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const events = await prisma.event.findMany({
-    orderBy: { startDate: "desc" },
-    include: {
-      eventTeams: { include: { team: true } },
-      _count: { select: { matches: true } },
-    },
-  });
-  return NextResponse.json(events);
 }
 
 export async function POST(request: Request) {
+  let session;
   try {
-    await requireRole("admin");
+    session = await requireRole("admin");
   } catch (e) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -39,6 +48,7 @@ export async function POST(request: Request) {
         code,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
+        createdByUserId: session.id,
       },
     });
     if (Array.isArray(teamNumbers) && teamNumbers.length > 0) {

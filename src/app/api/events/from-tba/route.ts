@@ -63,6 +63,7 @@ export async function POST(request: Request) {
         tbaEventKey: eventKey,
         startDate,
         endDate,
+        createdByUserId: session.id,
       },
     });
 

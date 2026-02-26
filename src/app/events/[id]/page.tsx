@@ -130,7 +130,7 @@ export default function EventAnaSayfa() {
         </div>
       )}
 
-      {user?.role === "scout" && eventTeams.length > 0 && (
+      {user?.role === "scout" && eventTeams.length > 0 && teams.length === 0 && (
         <div className="card p-4 mb-6">
           <h2 className="font-semibold text-[#e0e7ff] mb-2">Scout yapacağım takımları seç (en fazla 2)</h2>
           <div className="flex flex-wrap gap-2 mb-3">

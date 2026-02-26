@@ -59,14 +59,16 @@ export default function EventsLayout({
           <Link href="/events" className="font-semibold text-[#f0f0f5] truncate text-sm">
             Callister 9024 · FRC 2026
           </Link>
-          <form action="/api/auth/logout" method="POST" className="inline">
-            <button
-              type="submit"
-              className="py-2.5 px-4 text-sm font-medium rounded-xl bg-white/10 text-[#f0f0f5] hover:bg-white/15 min-h-[44px] transition-colors"
-            >
-              Çıkış
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={async () => {
+              await fetch("/api/auth/logout", { method: "POST" });
+              window.location.href = "/login";
+            }}
+            className="py-2.5 px-4 text-sm font-medium rounded-xl bg-white/10 text-[#f0f0f5] hover:bg-white/15 min-h-[44px] transition-colors"
+          >
+            Çıkış
+          </button>
         </div>
         {eventId && (
           <div className="max-w-[400px] mx-auto flex gap-2 overflow-x-auto px-3 pb-2">

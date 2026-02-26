@@ -31,6 +31,7 @@ model User {
   pitScouts        PitScout[]
   matchScouts      MatchScout[]
   matchDataPosts   MatchDataPost[]
+  createdEvents   Event[]       @relation("EventCreatedBy")
 }
 
 // Takım bazlı maç verisi görsel paylaşımı (grup duvarı)
@@ -55,8 +56,10 @@ model Event {
   tbaEventKey  String?   @unique @map("tba_event_key") // TBA event key e.g. "2025istanbul"
   startDate    DateTime  @map("start_date")
   endDate      DateTime  @map("end_date")
-  createdAt    DateTime  @default(now()) @map("created_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  createdByUserId  String?   @map("created_by_user_id")
 
+  createdByUser    User?     @relation("EventCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   eventTeams       EventTeam[]
   scoutAssignments  ScoutAssignment[]
   pitScouts        PitScout[]
