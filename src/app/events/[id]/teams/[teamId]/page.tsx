@@ -309,15 +309,25 @@ export default function TeamSummaryPage() {
                 {ms.autonomousRouteWaypoints && ms.autonomousRouteWaypoints.length >= 2 && (
                   <div className="mt-2">
                     <span className="text-xs text-[#e0e7ff]/60">Otonom rotası:</span>
-                    <div className="mt-1 rounded border border-[#475569]/60 bg-[#0f172a] p-1 inline-block">
-                      <svg viewBox="0 0 1 1" className="h-16 w-32" preserveAspectRatio="none">
+                    <div
+                      className="mt-1 rounded border border-[#475569]/60 overflow-hidden inline-block bg-[#0f172a]"
+                      style={{
+                        aspectRatio: "54/26",
+                        width: 280,
+                        maxWidth: "100%",
+                        backgroundImage: "url(/frc-field.png)",
+                        backgroundSize: "100% 100%",
+                        backgroundPosition: "0 0",
+                      }}
+                    >
+                      <svg viewBox="0 0 1 1" className="block w-full h-full" preserveAspectRatio="none">
                         {(() => {
                           const pts = ms.autonomousRouteWaypoints;
                           return (
                             <>
-                              <polyline points={pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke="#6366f1" strokeWidth="0.03" strokeLinecap="round" strokeLinejoin="round" />
-                              {pts.map((p, i) => (
-                                <circle key={i} cx={p.x} cy={p.y} r="0.04" fill="#6366f1" />
+                              <polyline points={pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke="#6366f1" strokeWidth="0.04" strokeLinecap="round" strokeLinejoin="round" />
+                              {pts.map((p, idx) => (
+                                <circle key={idx} cx={p.x} cy={p.y} r="0.05" fill="#6366f1" stroke="#e0e7ff" strokeWidth="0.02" />
                               ))}
                             </>
                           );
