@@ -7,6 +7,7 @@ export type Waypoint = { x: number; y: number };
 const FIELD_ASPECT = 54 / 26; // FRC field ~54ft x 26ft
 const WAYPOINT_R = 10;
 const HIT_R = 18;
+const FIELD_IMAGE_SRC = "/frc-field.png";
 
 type Props = {
   waypoints: Waypoint[];
@@ -24,8 +25,21 @@ export function AutonomousRouteEditor({
   className = "",
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fieldImageRef = useRef<HTMLImageElement | null>(null);
+  const [imageReady, setImageReady] = useState(false);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [size, setSize] = useState({ w: width, h: height });
+
+  useEffect(() => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      fieldImageRef.current = img;
+      setImageReady(true);
+    };
+    img.onerror = () => setImageReady(false);
+    img.src = FIELD_IMAGE_SRC;
+  }, []);
 
   const getCanvas = useCallback(() => {
     const c = canvasRef.current;
@@ -86,27 +100,29 @@ export function AutonomousRouteEditor({
 
     ctx.clearRect(0, 0, rw, rh);
 
-    // Field background
-    ctx.fillStyle = "#1e293b";
-    ctx.fillRect(0, 0, rw, rh);
-    ctx.strokeStyle = "#475569";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(1, 1, rw - 2, rh - 2);
-
-    // Grid
-    ctx.strokeStyle = "#334155";
-    ctx.lineWidth = 1;
-    for (let i = 1; i < 4; i++) {
-      ctx.beginPath();
-      ctx.moveTo((rw * i) / 4, 0);
-      ctx.lineTo((rw * i) / 4, rh);
-      ctx.stroke();
-    }
-    for (let i = 1; i < 2; i++) {
-      ctx.beginPath();
-      ctx.moveTo(0, (rh * i) / 2);
-      ctx.lineTo(rw, (rh * i) / 2);
-      ctx.stroke();
+    const img = fieldImageRef.current;
+    if (img && imageReady && img.complete && img.naturalWidth > 0) {
+      ctx.drawImage(img, 0, 0, rw, rh);
+    } else {
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(0, 0, rw, rh);
+      ctx.strokeStyle = "#475569";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(1, 1, rw - 2, rh - 2);
+      ctx.strokeStyle = "#334155";
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo((rw * i) / 4, 0);
+        ctx.lineTo((rw * i) / 4, rh);
+        ctx.stroke();
+      }
+      for (let i = 1; i < 2; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, (rh * i) / 2);
+        ctx.lineTo(rw, (rh * i) / 2);
+        ctx.stroke();
+      }
     }
 
     // Path line
@@ -141,7 +157,7 @@ export function AutonomousRouteEditor({
       ctx.textBaseline = "middle";
       ctx.fillText(String(i + 1), px, py);
     });
-  }, [getCanvas, waypoints, normToCanvas]);
+  }, [getCanvas, waypoints, normToCanvas, imageReady]);
 
   useEffect(() => {
     draw();
