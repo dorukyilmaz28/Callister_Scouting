@@ -58,19 +58,28 @@ export async function POST(request: Request) {
 
     if (!file || (file && file.size === 0)) {
       if (!caption) return NextResponse.json({ error: "Görsel veya metin gerekli" }, { status: 400 });
-      const post = await prisma.matchDataPost.create({
-        data: {
-          userId: session.id,
-          teamNumber: session.teamNumber,
-          caption,
-        },
-      });
-      return NextResponse.json({
-        id: post.id,
-        imageUrl: null,
-        caption: post.caption,
-        createdAt: post.createdAt,
-      });
+      try {
+        const post = await prisma.matchDataPost.create({
+          data: {
+            userId: session.id,
+            teamNumber: session.teamNumber,
+            imageUrl: null,
+            caption,
+          },
+        });
+        return NextResponse.json({
+          id: post.id,
+          imageUrl: null,
+          caption: post.caption,
+          createdAt: post.createdAt,
+        });
+      } catch (createErr) {
+        console.error("[team-feed] text post create failed", createErr);
+        return NextResponse.json(
+          { error: "Metin paylaşımı kaydedilemedi. Veritabanında image_url sütunu opsiyonel olmalı (prisma/add-match-data-post-optional-image.sql)." },
+          { status: 500 }
+        );
+      }
     }
 
     if (!ALLOWED_TYPES.includes(file.type)) {

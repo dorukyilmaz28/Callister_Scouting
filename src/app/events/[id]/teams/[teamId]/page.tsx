@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import html2canvas from "html2canvas";
 import {
   BarChart,
   Bar,
@@ -54,8 +55,9 @@ export default function TeamSummaryPage() {
   const teamId = params.teamId as string;
   const [data, setData] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [copyDone, setCopyDone] = useState(false);
+  const [imageDone, setImageDone] = useState(false);
   const [shareDone, setShareDone] = useState(false);
+  const downloadRef = useRef<HTMLDivElement>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
 
@@ -114,10 +116,22 @@ export default function TeamSummaryPage() {
     return lines.join("\n");
   }
 
-  function handleCopy() {
-    navigator.clipboard.writeText(buildShareText());
-    setCopyDone(true);
-    setTimeout(() => setCopyDone(false), 2000);
+  async function handleDownloadImage() {
+    if (!downloadRef.current) return;
+    try {
+      const canvas = await html2canvas(downloadRef.current, {
+        backgroundColor: "#1a1e2e",
+        scale: 2,
+      });
+      const link = document.createElement("a");
+      link.download = `team-${team.number}-veriler.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      setImageDone(true);
+      setTimeout(() => setImageDone(false), 2000);
+    } catch {
+      setShareError("Görsel indirilemedi.");
+    }
   }
 
   async function handleShareToGroup() {
@@ -149,17 +163,13 @@ export default function TeamSummaryPage() {
         >
           ← Takımlara dön
         </Link>
-        <h1 className="text-xl font-bold text-[#f0f0f0]">
-          Team {team.number} {team.name ? `– ${team.name}` : ""}
-        </h1>
-        <p className="text-[#e0e7ff]/70 text-sm mt-0.5">Maç ve pit verileri</p>
-        <div className="flex flex-wrap gap-2 mt-3">
+        <div className="flex flex-wrap gap-2 mb-3">
           <button
             type="button"
-            onClick={handleCopy}
+            onClick={handleDownloadImage}
             className="py-2 px-4 rounded-lg bg-[#374151] text-[#e0e7ff] text-sm font-medium hover:bg-[#4b5563]"
           >
-            {copyDone ? "Kopyalandı!" : "Kopyala"}
+            {imageDone ? "İndirildi!" : "Görsel olarak indir"}
           </button>
           <button
             type="button"
@@ -172,6 +182,12 @@ export default function TeamSummaryPage() {
           {shareError && <p className="text-red-400 text-sm self-center">{shareError}</p>}
         </div>
       </div>
+
+      <div ref={downloadRef} className="space-y-6 p-4 rounded-xl" style={{ backgroundColor: "#1a1e2e" }}>
+        <h1 className="text-xl font-bold text-[#f0f0f0]">
+          Team {team.number} {team.name ? `– ${team.name}` : ""}
+        </h1>
+        <p className="text-[#e0e7ff]/70 text-sm mt-0.5">Maç ve pit verileri</p>
 
       <section className="card p-4">
         <h2 className="font-semibold text-[#e0e7ff] mb-3">Özet</h2>
@@ -194,8 +210,8 @@ export default function TeamSummaryPage() {
       {matchScouts.length > 0 && (
         <section className="card p-4">
           <h2 className="font-semibold text-[#e0e7ff] mb-3">Grafik – Maç skorları</h2>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="w-full min-h-[256px]" style={{ height: 256 }}>
+            <ResponsiveContainer width="100%" height={256}>
               <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis dataKey="name" tick={{ fill: "#e0e7ff", fontSize: 11 }} />
@@ -213,8 +229,8 @@ export default function TeamSummaryPage() {
       {summaryBarData.length > 0 && (
         <section className="card p-4">
           <h2 className="font-semibold text-[#e0e7ff] mb-3">Özet grafik</h2>
-          <div className="h-48 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="w-full min-h-[192px]" style={{ height: 192 }}>
+            <ResponsiveContainer width="100%" height={192}>
               <BarChart data={summaryBarData} layout="vertical" margin={{ top: 8, right: 24, left: 70, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis type="number" domain={[0, "auto"]} tick={{ fill: "#e0e7ff", fontSize: 11 }} />
@@ -278,6 +294,7 @@ export default function TeamSummaryPage() {
       {!pit && matchScouts.length === 0 && (
         <p className="text-[#e0e7ff]/60 text-center py-6">Bu takım için henüz pit veya match verisi yok.</p>
       )}
+      </div>
     </div>
   );
 }
