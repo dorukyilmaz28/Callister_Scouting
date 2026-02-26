@@ -3,6 +3,16 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 
 type Summary = {
   team: { id: string; number: number; name: string | null };
@@ -36,12 +46,18 @@ type Summary = {
   };
 };
 
+const CHART_COLORS = ["#6366f1", "#818cf8", "#a5b4fc"];
+
 export default function TeamSummaryPage() {
   const params = useParams();
   const eventId = params.id as string;
   const teamId = params.teamId as string;
   const [data, setData] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copyDone, setCopyDone] = useState(false);
+  const [shareDone, setShareDone] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/events/${eventId}/teams/${teamId}/summary`)
@@ -73,6 +89,57 @@ export default function TeamSummaryPage() {
 
   const { team, pit, matchScouts, summary } = data;
 
+  const chartData = matchScouts.map((ms) => ({
+    name: `${ms.match.matchType} ${ms.match.matchNumber}`,
+    Auto: ms.autoAttempted ? ms.autoScoreCount : 0,
+    Teleop: ms.gamePieceCount,
+    Climb: ms.climbAttempted ? (ms.climbSuccess ? 1 : 0) : 0,
+    Driver: ms.driverSkill ?? 0,
+  }));
+
+  const summaryBarData = [
+    { label: "Ort. Auto", value: summary.avgAutoScore ?? 0, color: CHART_COLORS[0] },
+    { label: "Tırmanma %", value: summary.climbSuccessRate != null ? summary.climbSuccessRate * 100 : 0, color: CHART_COLORS[1] },
+    { label: "Ort. Driver", value: summary.avgDriverSkill ?? 0, color: CHART_COLORS[2] },
+  ].filter((d) => d.value > 0);
+
+  function buildShareText(): string {
+    const lines = [
+      `Team ${team.number}${team.name ? ` – ${team.name}` : ""}`,
+      `Maç: ${summary.matchCount} · Ort. Auto: ${summary.avgAutoScore ?? "—"} · Tırmanma: ${summary.climbSuccessRate != null ? (summary.climbSuccessRate * 100).toFixed(0) + "%" : "—"} · Driver: ${summary.avgDriverSkill ?? "—"}`,
+    ];
+    matchScouts.slice(0, 10).forEach((ms) => {
+      lines.push(`${ms.match.matchType} ${ms.match.matchNumber}: Auto ${ms.autoAttempted ? ms.autoScoreCount : "—"} · Teleop ${ms.gamePieceCount} · Climb ${ms.climbAttempted ? (ms.climbSuccess ? "✓" : "✗") : "—"}`);
+    });
+    return lines.join("\n");
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(buildShareText());
+    setCopyDone(true);
+    setTimeout(() => setCopyDone(false), 2000);
+  }
+
+  async function handleShareToGroup() {
+    setShareLoading(true);
+    setShareError(null);
+    try {
+      const res = await fetch("/api/team-feed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caption: buildShareText() }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Paylaşılamadı");
+      setShareDone(true);
+      setTimeout(() => setShareDone(false), 2000);
+    } catch (e) {
+      setShareError(e instanceof Error ? e.message : "Takım sohbetine atılamadı.");
+    } finally {
+      setShareLoading(false);
+    }
+  }
+
   return (
     <div className="app-shell pt-4 space-y-6">
       <div>
@@ -86,6 +153,24 @@ export default function TeamSummaryPage() {
           Team {team.number} {team.name ? `– ${team.name}` : ""}
         </h1>
         <p className="text-[#e0e7ff]/70 text-sm mt-0.5">Maç ve pit verileri</p>
+        <div className="flex flex-wrap gap-2 mt-3">
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="py-2 px-4 rounded-lg bg-[#374151] text-[#e0e7ff] text-sm font-medium hover:bg-[#4b5563]"
+          >
+            {copyDone ? "Kopyalandı!" : "Kopyala"}
+          </button>
+          <button
+            type="button"
+            onClick={handleShareToGroup}
+            disabled={shareLoading}
+            className="py-2 px-4 rounded-lg bg-[#6366f1] text-white text-sm font-medium hover:bg-[#4f46e5] disabled:opacity-60"
+          >
+            {shareLoading ? "Gönderiliyor…" : shareDone ? "Gruba atıldı!" : "Gruba at"}
+          </button>
+          {shareError && <p className="text-red-400 text-sm self-center">{shareError}</p>}
+        </div>
       </div>
 
       <section className="card p-4">
@@ -105,6 +190,46 @@ export default function TeamSummaryPage() {
           <dd className="font-medium text-[#e0e7ff]">{summary.avgConsistency ?? "—"}</dd>
         </dl>
       </section>
+
+      {matchScouts.length > 0 && (
+        <section className="card p-4">
+          <h2 className="font-semibold text-[#e0e7ff] mb-3">Grafik – Maç skorları</h2>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="name" tick={{ fill: "#e0e7ff", fontSize: 11 }} />
+                <YAxis tick={{ fill: "#e0e7ff", fontSize: 11 }} />
+                <Tooltip contentStyle={{ background: "#1e1e2e", border: "1px solid #374151" }} labelStyle={{ color: "#e0e7ff" }} />
+                <Bar dataKey="Auto" fill={CHART_COLORS[0]} name="Auto" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="Teleop" fill={CHART_COLORS[1]} name="Teleop" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="Driver" fill={CHART_COLORS[2]} name="Driver" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      )}
+
+      {summaryBarData.length > 0 && (
+        <section className="card p-4">
+          <h2 className="font-semibold text-[#e0e7ff] mb-3">Özet grafik</h2>
+          <div className="h-48 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={summaryBarData} layout="vertical" margin={{ top: 8, right: 24, left: 70, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis type="number" domain={[0, "auto"]} tick={{ fill: "#e0e7ff", fontSize: 11 }} />
+                <YAxis type="category" dataKey="label" tick={{ fill: "#e0e7ff", fontSize: 11 }} width={65} />
+                <Tooltip contentStyle={{ background: "#1e1e2e", border: "1px solid #374151" }} />
+                <Bar dataKey="value" name="Değer" radius={[0, 2, 2, 0]}>
+                  {summaryBarData.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      )}
 
       {pit && (
         <section className="card p-4">

@@ -22,7 +22,7 @@ export async function GET() {
     return NextResponse.json(
       posts.map((p) => ({
         id: p.id,
-        imageUrl: p.imageUrl,
+        imageUrl: p.imageUrl ?? null,
         caption: p.caption,
         createdAt: p.createdAt,
         userFullName: p.user.fullName ?? p.user.name,
@@ -40,12 +40,39 @@ export async function POST(request: Request) {
     if (session.teamNumber == null) {
       return NextResponse.json({ error: "Takım numaranız tanımlı değil" }, { status: 403 });
     }
-    const formData = await request.formData();
-    const file = formData.get("file") as File | null;
-    const caption = formData.get("caption") as string | null;
-    if (!file || file.size === 0) {
-      return NextResponse.json({ error: "Görsel dosyası gerekli" }, { status: 400 });
+    const contentType = request.headers.get("content-type") ?? "";
+    let caption: string | null = null;
+    let file: File | null = null;
+
+    if (contentType.includes("application/json")) {
+      const body = await request.json();
+      caption = body?.caption?.trim() || null;
+      if (!caption) {
+        return NextResponse.json({ error: "Metin paylaşımı için caption gerekli" }, { status: 400 });
+      }
+    } else {
+      const formData = await request.formData();
+      file = formData.get("file") as File | null;
+      caption = (formData.get("caption") as string | null)?.trim() || null;
     }
+
+    if (!file || (file && file.size === 0)) {
+      if (!caption) return NextResponse.json({ error: "Görsel veya metin gerekli" }, { status: 400 });
+      const post = await prisma.matchDataPost.create({
+        data: {
+          userId: session.id,
+          teamNumber: session.teamNumber,
+          caption,
+        },
+      });
+      return NextResponse.json({
+        id: post.id,
+        imageUrl: null,
+        caption: post.caption,
+        createdAt: post.createdAt,
+      });
+    }
+
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json({ error: "Sadece PNG veya JPEG yükleyebilirsiniz" }, { status: 400 });
     }
@@ -65,7 +92,7 @@ export async function POST(request: Request) {
         userId: session.id,
         teamNumber: session.teamNumber,
         imageUrl,
-        caption: caption?.trim() || null,
+        caption: caption || null,
       },
     });
     return NextResponse.json({

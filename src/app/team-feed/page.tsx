@@ -152,12 +152,14 @@ export default function TeamFeedPage() {
         <ul className="space-y-4">
           {posts.map((p) => (
             <li key={p.id} className="card p-4">
-              <img
-                src={p.imageUrl}
-                alt={p.caption ?? "Maç verisi"}
-                className="w-full rounded-lg max-h-[400px] object-contain bg-[#1a1a2e]"
-              />
-              {p.caption && <p className="mt-2 text-[#e0e7ff]/90 text-sm">{p.caption}</p>}
+              {p.imageUrl && (
+                <img
+                  src={p.imageUrl}
+                  alt={p.caption ?? "Maç verisi"}
+                  className="w-full rounded-lg max-h-[400px] object-contain bg-[#1a1a2e]"
+                />
+              )}
+              {p.caption && <p className={`text-[#e0e7ff]/90 text-sm ${p.imageUrl ? "mt-2" : ""} whitespace-pre-wrap`}>{p.caption}</p>}
               <p className="mt-2 text-xs text-[#e0e7ff]/50">
                 {p.userFullName ?? "—"} · {new Date(p.createdAt).toLocaleString("tr-TR")}
               </p>
