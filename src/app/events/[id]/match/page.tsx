@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { RATING_1_5, CLIMB_TYPE_OPTIONS, MATCH_TYPE_OPTIONS } from "@/lib/constants";
+import { AutonomousRouteEditor, type Waypoint } from "@/components/AutonomousRouteEditor";
 
 type MatchScout = {
   autoAttempted: boolean;
@@ -19,6 +20,7 @@ type MatchScout = {
   requestedStrategy: string | null;
   driverSkill: number | null;
   scoutComments: string | null;
+  autonomousRouteWaypoints: Waypoint[] | null;
 };
 
 const bosForm: MatchScout = {
@@ -35,6 +37,7 @@ const bosForm: MatchScout = {
   requestedStrategy: null,
   driverSkill: null,
   scoutComments: null,
+  autonomousRouteWaypoints: null,
 };
 
 function Stepper({ value, onChange, min = 0 }: { value: number; onChange: (n: number) => void; min?: number }) {
@@ -130,6 +133,9 @@ export default function MatchScoutPage() {
             requestedStrategy: one.requestedStrategy ?? null,
             driverSkill: one.driverSkill ?? null,
             scoutComments: one.scoutComments ?? null,
+            autonomousRouteWaypoints: Array.isArray(one.autonomousRouteWaypoints)
+              ? one.autonomousRouteWaypoints
+              : null,
           });
           setClimbTypeOtherText(climbCustom);
         } else {
@@ -137,7 +143,10 @@ export default function MatchScoutPage() {
           setClimbTypeOtherText("");
         }
       })
-      .catch(() => setForm(bosForm))
+      .catch(() => {
+        setForm({ ...bosForm, autonomousRouteWaypoints: null });
+        setClimbTypeOtherText("");
+      })
       .finally(() => setLoading(false));
   }, [eventId, matchNumber, teamNumber, matchType]);
 
@@ -161,6 +170,7 @@ export default function MatchScoutPage() {
           teamNumber: tn,
           matchType,
           ...form,
+          autonomousRouteWaypoints: form.autonomousRouteWaypoints ?? undefined,
           climbType:
             form.climbType === "other" && climbTypeOtherText.trim()
               ? `other|${climbTypeOtherText.trim()}`
@@ -296,6 +306,12 @@ export default function MatchScoutPage() {
               placeholder="Merkez başlangıç, yolu vb."
             />
           </div>
+
+          <h2 className="font-semibold text-[#e0e7ff] pt-2">Otonom rotası (isteğe bağlı)</h2>
+          <AutonomousRouteEditor
+            waypoints={form.autonomousRouteWaypoints ?? []}
+            onChange={(wp) => setForm((f) => ({ ...f, autonomousRouteWaypoints: wp.length ? wp : null }))}
+          />
 
           <h2 className="font-semibold text-[#e0e7ff] pt-2">TELEOP</h2>
           <div>

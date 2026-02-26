@@ -165,6 +165,7 @@ model MatchScout {
   requestedStrategy String? @map("requested_strategy") @db.Text
   driverSkill       Int?    @map("driver_skill")       // 1-5
   scoutComments     String? @map("scout_comments")      @db.Text
+  autonomousRouteWaypoints Json? @map("autonomous_route_waypoints") // [{x,y}] 0-1 normalized
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

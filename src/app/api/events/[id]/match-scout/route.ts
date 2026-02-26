@@ -71,6 +71,7 @@ export async function POST(request: Request) {
       requestedStrategy,
       driverSkill,
       scoutComments,
+      autonomousRouteWaypoints,
     } = body;
     if (!eventId || matchNumber == null || teamNumber == null) {
       return NextResponse.json(
@@ -138,6 +139,7 @@ export async function POST(request: Request) {
         requestedStrategy: requestedStrategy ?? null,
         driverSkill: driverSkill != null ? Number(driverSkill) : null,
         scoutComments: scoutComments ?? null,
+        autonomousRouteWaypoints: Array.isArray(autonomousRouteWaypoints) ? autonomousRouteWaypoints : null,
       },
       update: {
         autoAttempted: !!autoAttempted,
@@ -153,6 +155,7 @@ export async function POST(request: Request) {
         requestedStrategy: requestedStrategy ?? null,
         driverSkill: driverSkill != null ? Number(driverSkill) : null,
         scoutComments: scoutComments ?? null,
+        autonomousRouteWaypoints: Array.isArray(autonomousRouteWaypoints) ? autonomousRouteWaypoints : null,
       },
       include: { team: true, match: true },
     });

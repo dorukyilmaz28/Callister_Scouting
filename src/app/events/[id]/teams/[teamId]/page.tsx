@@ -38,6 +38,7 @@ type Summary = {
     climbSuccess: boolean;
     driverSkill: number | null;
     scoutComments: string | null;
+    autonomousRouteWaypoints: { x: number; y: number }[] | null;
   }[];
   summary: {
     matchCount: number;
@@ -305,7 +306,26 @@ export default function TeamSummaryPage() {
                 {ms.scoutComments && (
                   <p className="text-sm text-[#e0e7ff]/70 mt-1 italic">{ms.scoutComments}</p>
                 )}
-              </div>
+                {ms.autonomousRouteWaypoints && ms.autonomousRouteWaypoints.length >= 2 && (
+                  <div className="mt-2">
+                    <span className="text-xs text-[#e0e7ff]/60">Otonom rotası:</span>
+                    <div className="mt-1 rounded border border-[#475569]/60 bg-[#0f172a] p-1 inline-block">
+                      <svg viewBox="0 0 1 1" className="h-16 w-32" preserveAspectRatio="none">
+                        {(() => {
+                          const pts = ms.autonomousRouteWaypoints;
+                          return (
+                            <>
+                              <polyline points={pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke="#6366f1" strokeWidth="0.03" strokeLinecap="round" strokeLinejoin="round" />
+                              {pts.map((p, i) => (
+                                <circle key={i} cx={p.x} cy={p.y} r="0.04" fill="#6366f1" />
+                              ))}
+                            </>
+                          );
+                        })()}
+                      </svg>
+                    </div>
+                  </div>
+                )}
             ))}
           </div>
         </section>
