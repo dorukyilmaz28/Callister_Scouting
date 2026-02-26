@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 
 type DashboardTeam = { teamId: string; teamNumber: number; pitDone: boolean; matchCount: number };
-type EventTeam = { id: string; number: number };
+type EventTeamDb = { id: string; number: number; name?: string | null };
+type TbaTeam = { team_number: number; nickname: string | null };
 type User = { name?: string | null; fullName?: string | null; role: string };
 
 export default function EventAnaSayfa() {
@@ -13,58 +14,85 @@ export default function EventAnaSayfa() {
   const id = params.id as string;
   const [user, setUser] = useState<User | null>(null);
   const [teams, setTeams] = useState<DashboardTeam[]>([]);
-  const [eventTeams, setEventTeams] = useState<EventTeam[]>([]);
+  const [eventTeamsDb, setEventTeamsDb] = useState<EventTeamDb[]>([]);
+  const [tbaTeams, setTbaTeams] = useState<TbaTeam[]>([]);
+  const [eventTbaEventKey, setEventTbaEventKey] = useState<string | null>(null);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
+  const [selectedTeamNumbers, setSelectedTeamNumbers] = useState<number[]>([]);
   const [myAssignSaving, setMyAssignSaving] = useState(false);
   const [myAssignMsg, setMyAssignMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [eventName, setEventName] = useState<string | null>(null);
-  const [syncTeamsLoading, setSyncTeamsLoading] = useState(false);
-  const [syncTeamsError, setSyncTeamsError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/events/${id}/dashboard`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : { teams: [], user: null, eventName: null })),
-      fetch(`/api/events/${id}/teams`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])),
-    ]).then(([dash, allTeams]) => {
-      setUser(dash.user ?? null);
-      setTeams(dash.teams ?? []);
-      setEventName(dash.eventName ?? null);
-      setEventTeams(Array.isArray(allTeams) ? allTeams : []);
-      setSelectedTeamIds((dash.teams ?? []).map((t: DashboardTeam) => t.teamId));
-      setLoading(false);
-    });
+    fetch(`/api/events/${id}/dashboard`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { teams: [], user: null, eventName: null, eventTbaEventKey: null }))
+      .then((dash) => {
+        setUser(dash.user ?? null);
+        setTeams(dash.teams ?? []);
+        setEventName(dash.eventName ?? null);
+        setEventTbaEventKey(dash.eventTbaEventKey ?? null);
+        setSelectedTeamIds((dash.teams ?? []).map((t: DashboardTeam) => t.teamId));
+        setSelectedTeamNumbers((dash.teams ?? []).map((t: DashboardTeam) => t.teamNumber));
+        if (dash.eventTbaEventKey) {
+          return fetch(`/api/events/${id}/tba-teams`, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : []))
+            .then((list: TbaTeam[]) => {
+              setTbaTeams(Array.isArray(list) ? list : []);
+              setEventTeamsDb([]);
+            });
+        }
+        return fetch(`/api/events/${id}/teams`, { cache: "no-store" })
+          .then((r) => (r.ok ? r.json() : []))
+          .then((list: EventTeamDb[]) => {
+            setEventTeamsDb(Array.isArray(list) ? list : []);
+            setTbaTeams([]);
+          });
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
-  function toggleMyTeam(teamId: string) {
-    setSelectedTeamIds((prev) => {
-      if (prev.includes(teamId)) return prev.filter((id) => id !== teamId);
-      if (prev.length >= 2) return prev;
-      return [...prev, teamId];
-    });
+  const useTbaTeams = !!eventTbaEventKey;
+  const eventTeamsList = useTbaTeams
+    ? tbaTeams.map((t) => ({ key: String(t.team_number), number: t.team_number, name: t.nickname }))
+    : eventTeamsDb.map((t) => ({ key: t.id, number: t.number, name: t.name ?? null }));
+
+  function toggleByKey(key: string) {
+    if (useTbaTeams) {
+      const num = Number(key);
+      setSelectedTeamNumbers((prev) => {
+        if (prev.includes(num)) return prev.filter((n) => n !== num);
+        if (prev.length >= 2) return prev;
+        return [...prev, num];
+      });
+    } else {
+      setSelectedTeamIds((prev) => {
+        if (prev.includes(key)) return prev.filter((id) => id !== key);
+        if (prev.length >= 2) return prev;
+        return [...prev, key];
+      });
+    }
   }
 
-  function syncTeamsFromTba() {
-    setSyncTeamsError(null);
-    setSyncTeamsLoading(true);
-    fetch(`/api/events/${id}/sync-teams-from-tba`, { method: "POST" })
-      .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
-      .then(({ ok, data }) => {
-        if (!ok) throw new Error(data?.error ?? "Yüklenemedi");
-        const list = data?.eventTeams ?? [];
-        setEventTeams(list.map((et: { team: { id: string; number: number } }) => ({ id: et.team.id, number: et.team.number })));
-      })
-      .catch((err) => setSyncTeamsError(err.message ?? "TBA'dan takımlar yüklenemedi."))
-      .finally(() => setSyncTeamsLoading(false));
+  function isSelected(key: string) {
+    if (useTbaTeams) return selectedTeamNumbers.includes(Number(key));
+    return selectedTeamIds.includes(key);
+  }
+
+  function selectedCount() {
+    return useTbaTeams ? selectedTeamNumbers.length : selectedTeamIds.length;
   }
 
   function saveMyAssignments() {
     setMyAssignMsg(null);
     setMyAssignSaving(true);
+    const body = useTbaTeams
+      ? { teamNumbers: selectedTeamNumbers }
+      : { teamIds: selectedTeamIds };
     fetch(`/api/events/${id}/my-assignments`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teamIds: selectedTeamIds }),
+      body: JSON.stringify(body),
     })
       .then((r) => {
         if (!r.ok) return r.json().then((d) => Promise.reject(new Error(d.error ?? "Kaydedilemedi")));
@@ -112,51 +140,43 @@ export default function EventAnaSayfa() {
         )}
       </header>
 
-      {eventTeams.length === 0 && (
+      {!useTbaTeams && eventTeamsList.length === 0 && (
         <div className="card p-4 mb-6">
-          <h2 className="font-semibold text-[#e0e7ff] mb-2">Takım listesi yok</h2>
-          <p className="text-[#e0e7ff]/80 text-sm mb-3">
-            Bu etkinlik TBA’dan eklendiyse, aşağıdaki düğme ile takım listesini yükleyebilirsiniz. Ardından scout yapacağınız takımları seçebilirsiniz.
+          <p className="text-[#e0e7ff]/80 text-sm">
+            Bu etkinlik manuel eklendi. Takım listesi yönetici tarafından eklenebilir.
           </p>
-          {syncTeamsError && <p className="text-red-400 text-sm mb-2">{syncTeamsError}</p>}
-          <button
-            type="button"
-            onClick={syncTeamsFromTba}
-            disabled={syncTeamsLoading}
-            className="btn-primary"
-          >
-            {syncTeamsLoading ? "Yükleniyor…" : "Takımları TBA'dan yükle"}
-          </button>
         </div>
       )}
 
-      {user?.role === "scout" && eventTeams.length > 0 && teams.length === 0 && (
+      {user?.role === "scout" && eventTeamsList.length > 0 && teams.length === 0 && (
         <div className="card p-4 mb-6">
           <h2 className="font-semibold text-[#e0e7ff] mb-2">Scout yapacağım takımları seç (en fazla 2)</h2>
+          <p className="text-[#e0e7ff]/70 text-xs mb-2">
+            {useTbaTeams ? "Takımlar TBA’dan anlık gösteriliyor; sadece seçtikleriniz kaydedilir." : ""}
+          </p>
           <div className="flex flex-wrap gap-2 mb-3">
-            {eventTeams.map((t) => (
+            {eventTeamsList.map((t) => (
               <button
-                key={t.id}
+                key={t.key}
                 type="button"
-                onClick={() => toggleMyTeam(t.id)}
+                onClick={() => toggleByKey(t.key)}
                 className={`py-2 px-4 rounded-lg font-medium ${
-                  selectedTeamIds.includes(t.id)
-                    ? "bg-[#6366f1] text-white"
-                    : "bg-[#374151] text-[#e0e7ff]/80"
+                  isSelected(t.key) ? "bg-[#6366f1] text-white" : "bg-[#374151] text-[#e0e7ff]/80"
                 }`}
               >
                 {t.number}
+                {t.name ? ` · ${t.name}` : ""}
               </button>
             ))}
           </div>
-          <p className="text-sm text-[#e0e7ff]/70 mb-2">Seçili: {selectedTeamIds.length}/2</p>
+          <p className="text-sm text-[#e0e7ff]/70 mb-2">Seçili: {selectedCount()}/2</p>
           {myAssignMsg && (
             <p className={myAssignMsg.ok ? "text-green-500 text-sm" : "text-red-500 text-sm"}>{myAssignMsg.text}</p>
           )}
           <button
             type="button"
             onClick={saveMyAssignments}
-            disabled={myAssignSaving || selectedTeamIds.length > 2}
+            disabled={myAssignSaving || selectedCount() > 2}
             className="btn-primary"
           >
             {myAssignSaving ? "Kaydediliyor…" : "Kaydet"}

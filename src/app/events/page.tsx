@@ -23,11 +23,20 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tbaOpen, setTbaOpen] = useState(false);
-  const [tbaYear, setTbaYear] = useState(new Date().getFullYear().toString());
-  const [tbaEvents, setTbaEvents] = useState<TBAEvent[]>([]);
+  const [tbaSearch, setTbaSearch] = useState("");
+  const [tbaEventsAll, setTbaEventsAll] = useState<TBAEvent[]>([]);
   const [tbaLoading, setTbaLoading] = useState(false);
   const [tbaAdding, setTbaAdding] = useState(false);
   const [tbaError, setTbaError] = useState("");
+
+  const tbaYear = new Date().getFullYear();
+  const tbaEvents = tbaSearch.trim()
+    ? tbaEventsAll.filter(
+        (ev) =>
+          ev.name.toLowerCase().includes(tbaSearch.toLowerCase()) ||
+          ev.key.toLowerCase().includes(tbaSearch.toLowerCase())
+      )
+    : tbaEventsAll;
 
   function loadEvents() {
     return fetch("/api/events")
@@ -56,7 +65,7 @@ export default function EventsPage() {
         if (!r.ok) throw new Error("TBA listesi alınamadı");
         return r.json();
       })
-      .then(setTbaEvents)
+      .then(setTbaEventsAll)
       .catch(() => setTbaError("TBA etkinlikleri yüklenemedi. API key kontrol edin."))
       .finally(() => setTbaLoading(false));
   }
@@ -118,7 +127,7 @@ export default function EventsPage() {
           <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => { setTbaOpen(true); setTbaEvents([]); setTbaError(""); }}
+            onClick={() => { setTbaOpen(true); setTbaEventsAll([]); setTbaSearch(""); setTbaError(""); }}
             className="py-3 px-4 text-sm font-medium rounded-lg bg-[#6366f1] text-white hover:bg-[#4f46e5]"
           >
             TBA&apos;dan regional ekle
@@ -138,14 +147,13 @@ export default function EventsPage() {
       {tbaOpen && (
         <div className="card p-4 mb-4">
           <h2 className="font-semibold text-[#e0e7ff] mb-2">Blue Alliance&apos;dan etkinlik seç</h2>
-          <div className="flex gap-2 mb-3">
+          <div className="flex flex-wrap gap-2 mb-3">
             <input
-              type="number"
-              value={tbaYear}
-              onChange={(e) => setTbaYear(e.target.value)}
-              min={2020}
-              max={2030}
-              className="input-field w-24"
+              type="text"
+              value={tbaSearch}
+              onChange={(e) => setTbaSearch(e.target.value)}
+              placeholder="Bölge veya etkinlik ara (örn. Ankara, milac)"
+              className="input-field flex-1 min-w-[180px]"
             />
             <button
               type="button"
@@ -164,6 +172,12 @@ export default function EventsPage() {
             </button>
           </div>
           {tbaError && <p className="text-red-500 text-sm mb-2">{tbaError}</p>}
+          {tbaEventsAll.length === 0 && !tbaLoading && (
+            <p className="text-[#e0e7ff]/70 text-sm mb-2">Listele ile etkinlikleri getirin.</p>
+          )}
+          {tbaEventsAll.length > 0 && tbaSearch.trim() && tbaEvents.length === 0 && (
+            <p className="text-[#e0e7ff]/70 text-sm mb-2">Aramanıza uygun etkinlik yok. Farklı bir kelime deneyin.</p>
+          )}
           {tbaEvents.length > 0 && (
             <ul className="max-h-64 overflow-y-auto space-y-1">
               {tbaEvents.map((ev) => (

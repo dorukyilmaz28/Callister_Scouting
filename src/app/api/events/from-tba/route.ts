@@ -26,14 +26,9 @@ export async function POST(request: Request) {
       return NextResponse.json(existing);
     }
 
-    const [eventRes, teamsRes] = await Promise.all([
-      fetch(`${TBA_BASE}/event/${encodeURIComponent(eventKey)}`, {
-        headers: { "X-TBA-Auth-Key": key },
-      }),
-      fetch(`${TBA_BASE}/event/${encodeURIComponent(eventKey)}/teams`, {
-        headers: { "X-TBA-Auth-Key": key },
-      }),
-    ]);
+    const eventRes = await fetch(`${TBA_BASE}/event/${encodeURIComponent(eventKey)}`, {
+      headers: { "X-TBA-Auth-Key": key },
+    });
     if (!eventRes.ok) {
       return NextResponse.json(
         { error: "TBA etkinlik bilgisi alınamadı" },
@@ -67,30 +62,7 @@ export async function POST(request: Request) {
       },
     });
 
-    if (teamsRes.ok) {
-      const tbaTeams = (await teamsRes.json()) as { team_number: number; nickname?: string }[];
-      const teamNumbers = tbaTeams.map((t) => t.team_number);
-      for (const num of teamNumbers) {
-        await prisma.team.upsert({
-          where: { number: num },
-          create: { number: num },
-          update: {},
-        });
-      }
-      const teams = await prisma.team.findMany({
-        where: { number: { in: teamNumbers } },
-      });
-      await prisma.eventTeam.createMany({
-        data: teams.map((t) => ({ eventId: event.id, teamId: t.id })),
-        skipDuplicates: true,
-      });
-    }
-
-    const withTeams = await prisma.event.findUnique({
-      where: { id: event.id },
-      include: { eventTeams: { include: { team: true } } },
-    });
-    return NextResponse.json(withTeams ?? event);
+    return NextResponse.json(event);
   } catch (e) {
     return NextResponse.json({ error: "TBA'dan etkinlik oluşturulamadı" }, { status: 500 });
   }

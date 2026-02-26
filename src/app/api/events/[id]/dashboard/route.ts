@@ -40,10 +40,15 @@ export async function GET(
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      select: { name: true },
+      select: { name: true, tbaEventKey: true },
     });
 
-    return NextResponse.json({ user: session, teams, eventName: event?.name ?? null });
+    return NextResponse.json({
+      user: session,
+      teams,
+      eventName: event?.name ?? null,
+      eventTbaEventKey: event?.tbaEventKey ?? null,
+    });
   } catch (e) {
     console.error("[dashboard]", e);
     const message = e instanceof Error ? e.message : "Failed";

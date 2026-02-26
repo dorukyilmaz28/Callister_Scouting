@@ -13,33 +13,62 @@ export async function PUT(
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const { id: eventId } = await params;
     const body = await request.json();
-    const teamIds = body?.teamIds;
-    if (!Array.isArray(teamIds)) {
+    const teamIds = body?.teamIds as string[] | undefined;
+    const teamNumbers = body?.teamNumbers as number[] | undefined;
+
+    let validTeamIds: string[];
+
+    if (Array.isArray(teamNumbers) && teamNumbers.length > 0) {
+      if (teamNumbers.length > MAX_TEAMS_PER_SCOUT) {
+        return NextResponse.json(
+          { error: `En fazla ${MAX_TEAMS_PER_SCOUT} takım seçebilirsiniz` },
+          { status: 400 }
+        );
+      }
+      const event = await prisma.event.findUnique({ where: { id: eventId } });
+      if (!event) return NextResponse.json({ error: "Etkinlik bulunamadı" }, { status: 404 });
+      validTeamIds = [];
+      for (const num of teamNumbers) {
+        const team = await prisma.team.upsert({
+          where: { number: num },
+          create: { number: num },
+          update: {},
+        });
+        await prisma.eventTeam.upsert({
+          where: { eventId_teamId: { eventId, teamId: team.id } },
+          create: { eventId, teamId: team.id },
+          update: {},
+        });
+        validTeamIds.push(team.id);
+      }
+    } else if (Array.isArray(teamIds) && teamIds.length > 0) {
+      if (teamIds.length > MAX_TEAMS_PER_SCOUT) {
+        return NextResponse.json(
+          { error: `En fazla ${MAX_TEAMS_PER_SCOUT} takım seçebilirsiniz` },
+          { status: 400 }
+        );
+      }
+      const event = await prisma.event.findUnique({
+        where: { id: eventId },
+        include: { eventTeams: true },
+      });
+      if (!event) return NextResponse.json({ error: "Etkinlik bulunamadı" }, { status: 404 });
+      validTeamIds = event.eventTeams
+        .filter((et) => teamIds.includes(et.teamId))
+        .map((et) => et.teamId);
+      if (validTeamIds.length !== teamIds.length) {
+        return NextResponse.json(
+          { error: "Seçilen takımlar bu etkinlikte olmalı" },
+          { status: 400 }
+        );
+      }
+    } else {
       return NextResponse.json(
-        { error: "teamIds (array) gerekli" },
+        { error: "teamIds veya teamNumbers (array) gerekli" },
         { status: 400 }
       );
     }
-    if (teamIds.length > MAX_TEAMS_PER_SCOUT) {
-      return NextResponse.json(
-        { error: `En fazla ${MAX_TEAMS_PER_SCOUT} takım seçebilirsiniz` },
-        { status: 400 }
-      );
-    }
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
-      include: { eventTeams: true },
-    });
-    if (!event) return NextResponse.json({ error: "Etkinlik bulunamadı" }, { status: 404 });
-    const validTeamIds = event.eventTeams
-      .filter((et) => teamIds.includes(et.teamId))
-      .map((et) => et.teamId);
-    if (teamIds.length !== validTeamIds.length) {
-      return NextResponse.json(
-        { error: "Seçilen takımlar bu etkinlikte olmalı" },
-        { status: 400 }
-      );
-    }
+
     await prisma.scoutAssignment.deleteMany({
       where: { eventId, userId: session.id },
     });
