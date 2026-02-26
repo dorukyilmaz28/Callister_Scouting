@@ -326,6 +326,7 @@ export default function TeamSummaryPage() {
                     </div>
                   </div>
                 )}
+              </div>
             ))}
           </div>
         </section>
