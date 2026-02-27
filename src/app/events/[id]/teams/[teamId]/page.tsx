@@ -327,7 +327,10 @@ export default function TeamSummaryPage() {
                             <>
                               <polyline points={pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke="#6366f1" strokeWidth="0.04" strokeLinecap="round" strokeLinejoin="round" />
                               {pts.map((p, idx) => (
-                                <circle key={idx} cx={p.x} cy={p.y} r="0.05" fill="#6366f1" stroke="#e0e7ff" strokeWidth="0.02" />
+                                <g key={idx}>
+                                  <circle cx={p.x} cy={p.y} r="0.05" fill="#6366f1" stroke="#e0e7ff" strokeWidth="0.02" />
+                                  <text x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize="0.045" fontWeight="bold" style={{ fontFamily: "system-ui, sans-serif" }}>{idx + 1}</text>
+                                </g>
                               ))}
                             </>
                           );
