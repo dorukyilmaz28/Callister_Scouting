@@ -46,15 +46,29 @@ export async function GET(
 
     if (res.status === 304)
       return new NextResponse(null, { status: 304 });
+    if (res.status === 404)
+      return NextResponse.json(
+        { error: "Bu etkinlik için henüz program yok (etkinlik aktif değil veya FMS’te kayıt yok)." },
+        { status: 404 }
+      );
     if (!res.ok) {
       const text = await res.text();
       return NextResponse.json(
         { error: `FRC API hatası: ${res.status}`, details: text.slice(0, 200) },
-        { status: res.status === 401 ? 503 : res.status }
+        { status: res.status === 401 ? 503 : 502 }
       );
     }
 
-    const data = await res.json();
+    const text = await res.text();
+    let data: unknown;
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      return NextResponse.json(
+        { error: "FRC API geçersiz yanıt döndü" },
+        { status: 502 }
+      );
+    }
     return NextResponse.json(data);
   } catch (e) {
     console.error("[frc/schedule]", e);

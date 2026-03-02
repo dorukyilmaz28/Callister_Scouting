@@ -88,7 +88,7 @@ export default function LiveScoresPage() {
         </button>
       </div>
       <p className="text-sm text-[#e0e7ff]/70 mb-4">
-        FRC Events API (FMS) üzerinden resmi maç sonuçları.
+        FRC Events API (FMS) üzerinden resmi maç sonuçları. Etkinlik henüz başlamadıysa veya FMS senkron yapmadıysa veri görünmeyebilir.
       </p>
 
       <div className="flex gap-2 mb-4">

@@ -14,25 +14,35 @@ export function getFrcAuthHeader(): string | null {
 }
 
 /**
- * Event.code veya tbaEventKey "2026txcmp" formatında.
+ * Event.code veya tbaEventKey: "2026txcmp" (yıl+kod) veya "txcmp" (sadece kod).
  * FRC API: season=2026, eventCode=txcmp
  */
 export function getSeasonAndEventCode(
   codeOrKey: string | null | undefined
 ): { season: number; eventCode: string } | null {
   const s = (codeOrKey ?? "").trim();
-  if (s.length < 5) return null;
-  const year = parseInt(s.slice(0, 4), 10);
-  if (Number.isNaN(year) || year < 1992 || year > 2100) return null;
-  const eventCode = s.slice(4);
+  if (!s) return null;
+  const currentYear = new Date().getFullYear();
+  let season: number;
+  let eventCode: string;
+  if (s.length >= 5 && /^\d{4}/.test(s)) {
+    const year = parseInt(s.slice(0, 4), 10);
+    if (Number.isNaN(year) || year < 1992 || year > 2100) return null;
+    eventCode = s.slice(4);
+    season = year;
+  } else {
+    eventCode = s;
+    season = currentYear;
+  }
   if (!eventCode) return null;
-  return { season: year, eventCode };
+  return { season, eventCode };
 }
 
+/** FRC API path'leri: matches, schedule, rankings (dokümantasyona göre) */
 export function buildFrcUrl(
   season: number,
   eventCode: string,
-  path: "scores" | "schedule" | "rankings"
+  path: "matches" | "schedule" | "rankings"
 ): string {
   return `${FRC_API_BASE}/${season}/${path}/${encodeURIComponent(eventCode)}`;
 }
