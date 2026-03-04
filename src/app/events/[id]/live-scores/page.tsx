@@ -51,6 +51,24 @@ function normalizeRankings(data: unknown): RankingRow[] {
   return [];
 }
 
+type ScheduleTeam = { teamNumber: number; station: string };
+type ScheduleItem = {
+  matchNumber?: number;
+  description?: string;
+  startTime?: string;
+  tournamentLevel?: string;
+  teams?: ScheduleTeam[];
+};
+
+function normalizeSchedule(data: unknown): ScheduleItem[] {
+  if (!data || typeof data !== "object") return [];
+  const o = data as Record<string, unknown>;
+  if (Array.isArray(o.Schedule)) return o.Schedule as ScheduleItem[];
+  if (Array.isArray(o.schedule)) return o.schedule as ScheduleItem[];
+  if (Array.isArray(data)) return data as ScheduleItem[];
+  return [];
+}
+
 export default function LiveScoresPage() {
   const params = useParams();
   const eventId = params.id as string;
@@ -60,9 +78,21 @@ export default function LiveScoresPage() {
   const [schedule, setSchedule] = useState<unknown>(null);
   const [rankings, setRankings] = useState<unknown>(null);
   const [teamNamesByNumber, setTeamNamesByNumber] = useState<Record<number, string>>({});
+  const [scoutMatchList, setScoutMatchList] = useState<Array<{
+    matchNumber: number;
+    matchType: string;
+    entries: Array<{
+      teamNumber: number;
+      teamName: string | null;
+      autoScoreCount: number;
+      gamePieceCount: number;
+      climbSuccess: boolean;
+    }>;
+  }> | null>(null);
   const [activeTab, setActiveTab] = useState<"scores" | "schedule" | "rankings">("scores");
 
   const rankingRows = normalizeRankings(rankings);
+  const scheduleItems = normalizeSchedule(schedule);
 
   useEffect(() => {
     fetch(`/api/events/${eventId}/dashboard`, { cache: "no-store" })
@@ -101,9 +131,24 @@ export default function LiveScoresPage() {
         return r.json();
       })
       .then((data) => {
-        setMatches(normalizeMatchScores(data));
+        const list = normalizeMatchScores(data);
+        setMatches(list);
+        if (list.length === 0) {
+          fetch(`/api/events/${eventId}/scout-match-list`, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => setScoutMatchList(d?.matches ?? null))
+            .catch(() => setScoutMatchList(null));
+        } else {
+          setScoutMatchList(null);
+        }
       })
-      .catch((e) => setError(e?.message ?? "Maç sonuçları alınamadı"))
+      .catch((e) => {
+        setError(e?.message ?? "Maç sonuçları alınamadı");
+        fetch(`/api/events/${eventId}/scout-match-list`, { cache: "no-store" })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => setScoutMatchList(d?.matches ?? null))
+          .catch(() => setScoutMatchList(null));
+      })
       .finally(() => setLoading(false));
   }
 
@@ -172,17 +217,20 @@ export default function LiveScoresPage() {
 
       {activeTab === "scores" && (
         <>
-          {loading && matches.length === 0 ? (
+          {loading && matches.length === 0 && !scoutMatchList?.length ? (
             <div className="card p-8 text-center">
               <p className="text-[#e0e7ff]/70">Yükleniyor…</p>
             </div>
-          ) : matches.length === 0 && !error ? (
+          ) : matches.length === 0 && !scoutMatchList?.length ? (
             <div className="card p-8 text-center">
-              <p className="text-[#e0e7ff]/70">
-                Henüz maç sonucu yok veya etkinlik kodu FRC API ile eşleşmiyor.
+              <p className="text-[#e0e7ff]/70 mb-2">
+                Henüz resmi maç sonucu yok veya etkinlik kodu FRC API ile eşleşmiyor.
+              </p>
+              <p className="text-[#e0e7ff]/50 text-sm">
+                Maç girişi yaptıysanız, Takımlar sekmesinden takım sayfalarında görebilirsiniz.
               </p>
             </div>
-          ) : (
+          ) : matches.length > 0 ? (
             <ul className="space-y-2">
               {matches.map((m, i) => {
                 const num = m.matchNumber ?? (m["match number"] as number | undefined) ?? i + 1;
@@ -225,7 +273,39 @@ export default function LiveScoresPage() {
                 );
               })}
             </ul>
-          )}
+          ) : scoutMatchList && scoutMatchList.length > 0 ? (
+            <div className="space-y-4">
+              <p className="text-[#e0e7ff]/80 text-sm">
+                Resmi FMS skoru henüz yok. Scout girişleriniz:
+              </p>
+              <ul className="space-y-3">
+                {scoutMatchList.map((m) => (
+                  <li key={`${m.matchType}-${m.matchNumber}`} className="card p-4">
+                    <div className="font-semibold text-[#e0e7ff] mb-2">
+                      {m.matchType === "qual" ? "Qual" : "Playoff"} Maç {m.matchNumber}
+                    </div>
+                    <ul className="space-y-1.5 text-sm text-[#e0e7ff]/90">
+                      {m.entries.map((e) => (
+                        <li key={e.teamNumber} className="flex justify-between gap-2">
+                          <span>
+                            Takım {e.teamNumber}
+                            {(teamNamesByNumber[e.teamNumber] ?? e.teamName) && (
+                              <span className="text-[#e0e7ff]/70 ml-1">
+                                ({(teamNamesByNumber[e.teamNumber] ?? e.teamName) ?? ""})
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-[#e0e7ff]/70">
+                            Auto: {e.autoScoreCount} · Teleop: {e.gamePieceCount} · Tırmanma: {e.climbSuccess ? "✓" : "—"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </>
       )}
 
@@ -233,15 +313,49 @@ export default function LiveScoresPage() {
         <div className="card p-4">
           {schedule != null && (schedule as { error?: string }).error ? (
             <p className="text-amber-400/90 text-sm">{(schedule as { error: string }).error}</p>
-          ) : schedule != null && (schedule as { schedule?: unknown }).schedule === null ? (
-            <p className="text-[#e0e7ff]/60 text-sm">Program henüz yok.</p>
-          ) : schedule != null ? (
-            <pre className="text-xs text-[#e0e7ff]/80 overflow-x-auto whitespace-pre-wrap">
-              {JSON.stringify(schedule, null, 2).slice(0, 3000)}
-              {JSON.stringify(schedule).length > 3000 ? "…" : ""}
-            </pre>
+          ) : scheduleItems.length === 0 ? (
+            <p className="text-[#e0e7ff]/60 text-sm">Program henüz yok veya yüklenemedi.</p>
           ) : (
-            <p className="text-[#e0e7ff]/60 text-sm">Program yüklenemedi veya boş.</p>
+            <ul className="space-y-3">
+              {scheduleItems.map((item, i) => {
+                const teams = item.teams ?? [];
+                const red = teams.filter((t) => (t.station ?? "").startsWith("Red"));
+                const blue = teams.filter((t) => (t.station ?? "").startsWith("Blue"));
+                const timeStr = item.startTime
+                  ? new Date(item.startTime).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })
+                  : "";
+                return (
+                  <li key={`${item.matchNumber ?? i}-${item.description ?? i}`} className="border-b border-white/10 pb-3 last:border-0 last:pb-0">
+                    <div className="font-semibold text-[#e0e7ff]">
+                      {item.description ?? `Maç ${item.matchNumber ?? i + 1}`}
+                      {timeStr && <span className="text-xs font-normal text-[#e0e7ff]/60 ml-2">{timeStr}</span>}
+                    </div>
+                    <div className="mt-1.5 grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-red-400/90 font-medium">Kırmızı:</span>{" "}
+                        {red.map((t) => (
+                          <span key={t.teamNumber}>
+                            {teamNamesByNumber[t.teamNumber] ? `${t.teamNumber} (${teamNamesByNumber[t.teamNumber]})` : t.teamNumber}
+                            {red.indexOf(t) < red.length - 1 ? ", " : ""}
+                          </span>
+                        ))}
+                        {red.length === 0 && "—"}
+                      </div>
+                      <div>
+                        <span className="text-blue-400/90 font-medium">Mavi:</span>{" "}
+                        {blue.map((t) => (
+                          <span key={t.teamNumber}>
+                            {teamNamesByNumber[t.teamNumber] ? `${t.teamNumber} (${teamNamesByNumber[t.teamNumber]})` : t.teamNumber}
+                            {blue.indexOf(t) < blue.length - 1 ? ", " : ""}
+                          </span>
+                        ))}
+                        {blue.length === 0 && "—"}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
       )}
@@ -255,10 +369,15 @@ export default function LiveScoresPage() {
           ) : (
             <ul className="space-y-2">
               {rankingRows.map((r) => (
-                <li key={r.teamNumber} className="card p-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-[#c7d2fe]">#{r.rank}</span>
-                    <span className="text-sm font-medium text-[#e0e7ff]">Takım {r.teamNumber}</span>
+                <li key={`${r.rank}-${r.teamNumber}`} className="card p-3 flex items-center justify-between gap-3">
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-[#c7d2fe]">#{r.rank}</span>
+                      <span className="text-sm font-medium text-[#e0e7ff]">Takım {r.teamNumber}</span>
+                      {teamNamesByNumber[r.teamNumber] && (
+                        <span className="text-xs text-[#e0e7ff]/80 truncate">{teamNamesByNumber[r.teamNumber]}</span>
+                      )}
+                    </div>
                   </div>
                   <div className="text-xs text-right text-[#e0e7ff]/70">
                     <div>
