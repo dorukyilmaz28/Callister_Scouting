@@ -5,7 +5,10 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 
 type MatchScoreRow = {
+  // FRC tipik alanları – hepsi opsiyonel, farklı sezonlarda değişebilir
   matchNumber?: number;
+  matchType?: string;
+  // Bazı dokümanlarda farklı isimler kullanılıyor; hepsini esnek bırakıyoruz
   redScore?: number;
   blueScore?: number;
   redAuto?: number;
@@ -14,6 +17,8 @@ type MatchScoreRow = {
   blueTeleop?: number;
   redEndGame?: number;
   blueEndGame?: number;
+  scoreRedFinal?: number;
+  scoreBlueFinal?: number;
   [key: string]: unknown;
 };
 
@@ -29,13 +34,25 @@ type RankingRow = {
 };
 
 function normalizeMatchScores(data: unknown): MatchScoreRow[] {
+  if (!data) return [];
   if (Array.isArray(data)) return data as MatchScoreRow[];
-  if (data && typeof data === "object") {
+  if (typeof data === "object") {
     const o = data as Record<string, unknown>;
+    // Önce bilinen property adları
     if (Array.isArray(o.MatchScores)) return o.MatchScores as MatchScoreRow[];
     if (Array.isArray(o.matchScores)) return o.matchScores as MatchScoreRow[];
     if (Array.isArray(o.matches)) return o.matches as MatchScoreRow[];
     if (Array.isArray(o.Matches)) return o.Matches as MatchScoreRow[];
+    if (Array.isArray(o.MatchResults)) return o.MatchResults as MatchScoreRow[];
+    if (Array.isArray(o.matchResults)) return o.matchResults as MatchScoreRow[];
+
+    // Son çare: içinde matchNumber alanı olan ilk dizi
+    for (const value of Object.values(o)) {
+      if (Array.isArray(value) && value.length > 0 && typeof value[0] === "object") {
+        const arr = value as MatchScoreRow[];
+        if ("matchNumber" in (arr[0] as object)) return arr;
+      }
+    }
   }
   return [];
 }
