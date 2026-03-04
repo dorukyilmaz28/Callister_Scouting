@@ -59,9 +59,38 @@ export default function LiveScoresPage() {
   const [matches, setMatches] = useState<MatchScoreRow[]>([]);
   const [schedule, setSchedule] = useState<unknown>(null);
   const [rankings, setRankings] = useState<unknown>(null);
+  const [teamNamesByNumber, setTeamNamesByNumber] = useState<Record<number, string>>({});
   const [activeTab, setActiveTab] = useState<"scores" | "schedule" | "rankings">("scores");
 
   const rankingRows = normalizeRankings(rankings);
+
+  useEffect(() => {
+    fetch(`/api/events/${eventId}/dashboard`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((dash) => {
+        if (dash?.eventTbaEventKey) {
+          return fetch(`/api/events/${eventId}/tba-teams`, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : []))
+            .then((list: { team_number: number; nickname?: string | null }[]) => {
+              const map: Record<number, string> = {};
+              list.forEach((t) => {
+                if (t.nickname) map[t.team_number] = t.nickname;
+              });
+              setTeamNamesByNumber(map);
+            });
+        }
+        return fetch(`/api/events/${eventId}/teams`, { cache: "no-store" })
+          .then((r) => (r.ok ? r.json() : []))
+          .then((list: { number: number; name?: string | null }[]) => {
+            const map: Record<number, string> = {};
+            list.forEach((t) => {
+              if (t.name) map[t.number] = t.name;
+            });
+            setTeamNamesByNumber(map);
+          });
+      })
+      .catch(() => setTeamNamesByNumber({}));
+  }, [eventId]);
 
   function loadMatchResults() {
     setError(null);
@@ -104,7 +133,7 @@ export default function LiveScoresPage() {
         <h1 className="text-xl font-bold text-[#f0f0f5]">Canlı Skorlar</h1>
         <button
           type="button"
-          onClick={loadMatchResults}
+          onClick={() => { loadMatchResults(); loadSchedule(); loadRankings(); }}
           disabled={loading}
           className="py-2 px-4 rounded-xl bg-white/10 text-[#e0e7ff] text-sm font-medium hover:bg-white/15 disabled:opacity-60"
         >

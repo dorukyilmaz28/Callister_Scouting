@@ -38,7 +38,7 @@ export async function GET(
         { status: 400 }
       );
 
-    const url = buildFrcUrl(parsed.season, parsed.eventCode, "schedule");
+    const url = `${buildFrcUrl(parsed.season, parsed.eventCode, "schedule")}?tournamentLevel=qual`;
     const res = await fetch(url, {
       headers: { Authorization: auth, Accept: "application/json" },
       next: { revalidate: 60 },
