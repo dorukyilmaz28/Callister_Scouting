@@ -17,6 +17,17 @@ type MatchScoreRow = {
   [key: string]: unknown;
 };
 
+type RankingRow = {
+  rank: number;
+  teamNumber: number;
+  wins: number;
+  losses: number;
+  ties: number;
+  qualAverage: number;
+  matchesPlayed: number;
+  [key: string]: unknown;
+};
+
 function normalizeMatchScores(data: unknown): MatchScoreRow[] {
   if (Array.isArray(data)) return data as MatchScoreRow[];
   if (data && typeof data === "object") {
@@ -25,6 +36,17 @@ function normalizeMatchScores(data: unknown): MatchScoreRow[] {
     if (Array.isArray(o.matchScores)) return o.matchScores as MatchScoreRow[];
     if (Array.isArray(o.matches)) return o.matches as MatchScoreRow[];
     if (Array.isArray(o.Matches)) return o.Matches as MatchScoreRow[];
+  }
+  return [];
+}
+
+function normalizeRankings(data: unknown): RankingRow[] {
+  if (!data) return [];
+  if (Array.isArray(data)) return data as RankingRow[];
+  if (typeof data === "object") {
+    const o = data as Record<string, unknown>;
+    if (Array.isArray(o.Rankings)) return o.Rankings as RankingRow[];
+    if (Array.isArray(o.rankings)) return o.rankings as RankingRow[];
   }
   return [];
 }
@@ -38,6 +60,8 @@ export default function LiveScoresPage() {
   const [schedule, setSchedule] = useState<unknown>(null);
   const [rankings, setRankings] = useState<unknown>(null);
   const [activeTab, setActiveTab] = useState<"scores" | "schedule" | "rankings">("scores");
+
+  const rankingRows = normalizeRankings(rankings);
 
   function loadMatchResults() {
     setError(null);
@@ -197,15 +221,25 @@ export default function LiveScoresPage() {
         <div className="card p-4">
           {rankings != null && (rankings as { error?: string }).error ? (
             <p className="text-amber-400/90 text-sm">{(rankings as { error: string }).error}</p>
-          ) : rankings != null && (rankings as { rankings?: unknown }).rankings === null ? (
-            <p className="text-[#e0e7ff]/60 text-sm">Sıralama henüz yok.</p>
-          ) : rankings != null ? (
-            <pre className="text-xs text-[#e0e7ff]/80 overflow-x-auto whitespace-pre-wrap">
-              {JSON.stringify(rankings, null, 2).slice(0, 3000)}
-              {JSON.stringify(rankings).length > 3000 ? "…" : ""}
-            </pre>
+          ) : rankingRows.length === 0 ? (
+            <p className="text-[#e0e7ff]/60 text-sm">Sıralama henüz yok veya veri alınamadı.</p>
           ) : (
-            <p className="text-[#e0e7ff]/60 text-sm">Sıralama yüklenemedi veya boş.</p>
+            <ul className="space-y-2">
+              {rankingRows.map((r) => (
+                <li key={r.teamNumber} className="card p-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-[#c7d2fe]">#{r.rank}</span>
+                    <span className="text-sm font-medium text-[#e0e7ff]">Takım {r.teamNumber}</span>
+                  </div>
+                  <div className="text-xs text-right text-[#e0e7ff]/70">
+                    <div>
+                      {r.wins}-{r.losses}-{r.ties} · {r.matchesPlayed} maç
+                    </div>
+                    <div>Ort. puan: {r.qualAverage}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       )}
