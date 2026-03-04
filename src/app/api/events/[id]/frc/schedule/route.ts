@@ -48,15 +48,18 @@ export async function GET(
       return new NextResponse(null, { status: 304 });
     if (res.status === 404)
       return NextResponse.json(
-        { error: "Bu etkinlik için henüz program yok (etkinlik aktif değil veya FMS’te kayıt yok)." },
-        { status: 404 }
-      );
+        { error: "Bu etkinlik için henüz program yok (etkinlik aktif değil veya FMS’te kayıt yok).",
+        schedule: null,
+      });
     if (!res.ok) {
       const text = await res.text();
-      return NextResponse.json(
-        { error: `FRC API hatası: ${res.status}`, details: text.slice(0, 200) },
-        { status: res.status === 401 ? 503 : 502 }
-      );
+      console.warn("[frc/schedule] FRC API", res.status, text.slice(0, 150));
+      return NextResponse.json({
+        error: res.status === 401
+          ? "FRC API yetkisi yok (kullanıcı/şifre kontrol edin)."
+          : `FRC API yanıt vermedi (${res.status}). Etkinlik henüz açılmamış olabilir.`,
+        schedule: null,
+      });
     }
 
     const text = await res.text();
@@ -64,17 +67,17 @@ export async function GET(
     try {
       data = text ? JSON.parse(text) : {};
     } catch {
-      return NextResponse.json(
-        { error: "FRC API geçersiz yanıt döndü" },
-        { status: 502 }
-      );
+      return NextResponse.json({
+        error: "FRC API geçersiz yanıt; program şu an gösterilemiyor.",
+        schedule: null,
+      });
     }
     return NextResponse.json(data);
   } catch (e) {
     console.error("[frc/schedule]", e);
-    return NextResponse.json(
-      { error: "Maç programı alınamadı" },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      error: "Maç programı alınamadı.",
+      schedule: null,
+    });
   }
 }

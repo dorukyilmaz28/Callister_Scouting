@@ -56,14 +56,14 @@ export default function LiveScoresPage() {
 
   function loadSchedule() {
     fetch(`/api/events/${eventId}/frc/schedule`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => r.json())
       .then(setSchedule)
       .catch(() => setSchedule(null));
   }
 
   function loadRankings() {
     fetch(`/api/events/${eventId}/frc/rankings`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => r.json())
       .then(setRankings)
       .catch(() => setRankings(null));
   }
@@ -178,7 +178,11 @@ export default function LiveScoresPage() {
 
       {activeTab === "schedule" && (
         <div className="card p-4">
-          {schedule != null ? (
+          {schedule != null && (schedule as { error?: string }).error ? (
+            <p className="text-amber-400/90 text-sm">{(schedule as { error: string }).error}</p>
+          ) : schedule != null && (schedule as { schedule?: unknown }).schedule === null ? (
+            <p className="text-[#e0e7ff]/60 text-sm">Program henüz yok.</p>
+          ) : schedule != null ? (
             <pre className="text-xs text-[#e0e7ff]/80 overflow-x-auto whitespace-pre-wrap">
               {JSON.stringify(schedule, null, 2).slice(0, 3000)}
               {JSON.stringify(schedule).length > 3000 ? "…" : ""}
@@ -191,7 +195,11 @@ export default function LiveScoresPage() {
 
       {activeTab === "rankings" && (
         <div className="card p-4">
-          {rankings != null ? (
+          {rankings != null && (rankings as { error?: string }).error ? (
+            <p className="text-amber-400/90 text-sm">{(rankings as { error: string }).error}</p>
+          ) : rankings != null && (rankings as { rankings?: unknown }).rankings === null ? (
+            <p className="text-[#e0e7ff]/60 text-sm">Sıralama henüz yok.</p>
+          ) : rankings != null ? (
             <pre className="text-xs text-[#e0e7ff]/80 overflow-x-auto whitespace-pre-wrap">
               {JSON.stringify(rankings, null, 2).slice(0, 3000)}
               {JSON.stringify(rankings).length > 3000 ? "…" : ""}
