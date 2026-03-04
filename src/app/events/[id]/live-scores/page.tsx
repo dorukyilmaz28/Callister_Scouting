@@ -5,10 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 
 type MatchScoreRow = {
-  // FRC tipik alanları – hepsi opsiyonel, farklı sezonlarda değişebilir
   matchNumber?: number;
   matchType?: string;
-  // Bazı dokümanlarda farklı isimler kullanılıyor; hepsini esnek bırakıyoruz
   redScore?: number;
   blueScore?: number;
   redAuto?: number;
@@ -19,6 +17,8 @@ type MatchScoreRow = {
   blueEndGame?: number;
   scoreRedFinal?: number;
   scoreBlueFinal?: number;
+  /** FRC bazen skoru alliances.red.score / alliances.blue.score olarak döner */
+  alliances?: { red?: { score?: number }; blue?: { score?: number } };
   [key: string]: unknown;
 };
 
@@ -46,15 +46,35 @@ function normalizeMatchScores(data: unknown): MatchScoreRow[] {
     if (Array.isArray(o.MatchResults)) return o.MatchResults as MatchScoreRow[];
     if (Array.isArray(o.matchResults)) return o.matchResults as MatchScoreRow[];
 
-    // Son çare: içinde matchNumber alanı olan ilk dizi
+    // Son çare: içinde matchNumber veya alliances olan ilk dizi
     for (const value of Object.values(o)) {
       if (Array.isArray(value) && value.length > 0 && typeof value[0] === "object") {
-        const arr = value as MatchScoreRow[];
-        if ("matchNumber" in (arr[0] as object)) return arr;
+        const first = value[0] as Record<string, unknown>;
+        if ("matchNumber" in first || "alliances" in first || "match number" in first) return value as MatchScoreRow[];
       }
     }
   }
   return [];
+}
+
+/** FRC API bazen red/blue skoru alliances içinde döner; tüm varyasyonları dene */
+function getRedBlueScore(m: MatchScoreRow): { red: number | null; blue: number | null } {
+  const red =
+    (m.redScore as number | undefined) ??
+    (m.scoreRedFinal as number | undefined) ??
+    (typeof (m.alliances as { red?: { score?: number } } | undefined)?.red?.score === "number"
+      ? (m.alliances as { red: { score: number } }).red.score
+      : undefined);
+  const blue =
+    (m.blueScore as number | undefined) ??
+    (m.scoreBlueFinal as number | undefined) ??
+    (typeof (m.alliances as { blue?: { score?: number } } | undefined)?.blue?.score === "number"
+      ? (m.alliances as { blue: { score: number } }).blue.score
+      : undefined);
+  return {
+    red: typeof red === "number" ? red : null,
+    blue: typeof blue === "number" ? blue : null,
+  };
 }
 
 function normalizeRankings(data: unknown): RankingRow[] {
@@ -160,6 +180,8 @@ export default function LiveScoresPage() {
         return r.json();
       })
       .then((data) => {
+        if (data && typeof data === "object" && "error" in data && data.error)
+          setError(String(data.error));
         const list = normalizeMatchScores(data);
         setMatches(list);
         if (list.length === 0) {
@@ -267,12 +289,11 @@ export default function LiveScoresPage() {
                   <ul className="space-y-2">
                     {myTeamMatchesWithScores.map(({ item, score: m }) => {
                       const num = m?.matchNumber ?? item.matchNumber ?? 0;
-                      const red = (m?.redScore ?? m?.redAuto ?? 0) as number;
-                      const blue = (m?.blueScore ?? m?.blueAuto ?? 0) as number;
-                      const redDisplay = typeof red === "number" ? red : "—";
-                      const blueDisplay = typeof blue === "number" ? blue : "—";
+                      const { red, blue } = m ? getRedBlueScore(m) : { red: null, blue: null };
+                      const redDisplay = red ?? m?.redAuto ?? "—";
+                      const blueDisplay = blue ?? m?.blueAuto ?? "—";
                       const winner =
-                        typeof red === "number" && typeof blue === "number"
+                        red != null && blue != null
                           ? red > blue ? "Kırmızı" : blue > red ? "Mavi" : "Berabere"
                           : null;
                       return (
@@ -307,17 +328,12 @@ export default function LiveScoresPage() {
                 <ul className="space-y-2">
                   {matches.map((m, i) => {
                     const num = m.matchNumber ?? (m["match number"] as number | undefined) ?? i + 1;
-                    const red = m.redScore ?? m.redAuto ?? 0;
-                    const blue = m.blueScore ?? m.blueAuto ?? 0;
-                    const redDisplay = typeof red === "number" ? red : "—";
-                    const blueDisplay = typeof blue === "number" ? blue : "—";
+                    const { red, blue } = getRedBlueScore(m);
+                    const redDisplay = red ?? m.redAuto ?? "—";
+                    const blueDisplay = blue ?? m.blueAuto ?? "—";
                     const winner =
-                      typeof red === "number" && typeof blue === "number"
-                        ? red > blue
-                          ? "Kırmızı"
-                          : blue > red
-                            ? "Mavi"
-                            : "Berabere"
+                      red != null && blue != null
+                        ? red > blue ? "Kırmızı" : blue > red ? "Mavi" : "Berabere"
                         : null;
                     return (
                       <li key={`${num}-${i}`}>

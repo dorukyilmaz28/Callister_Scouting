@@ -38,11 +38,11 @@ export function getSeasonAndEventCode(
   return { season, eventCode };
 }
 
-/** FRC API path'leri: matches, schedule, rankings (dokümantasyona göre) */
+/** FRC API path'leri: matches, scores, schedule, rankings */
 export function buildFrcUrl(
   season: number,
   eventCode: string,
-  path: "matches" | "schedule" | "rankings"
+  path: "matches" | "scores" | "schedule" | "rankings"
 ): string {
   return `${FRC_API_BASE}/${season}/${path}/${encodeURIComponent(eventCode)}`;
 }
