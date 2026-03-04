@@ -29,7 +29,8 @@ export default function EventsPage() {
   const [tbaAdding, setTbaAdding] = useState(false);
   const [tbaError, setTbaError] = useState("");
 
-  const tbaYear = new Date().getFullYear();
+  const currentYear = new Date().getFullYear();
+  const [tbaYear, setTbaYear] = useState(currentYear);
   const tbaEvents = tbaSearch.trim()
     ? tbaEventsAll.filter(
         (ev) =>
@@ -148,12 +149,22 @@ export default function EventsPage() {
         <div className="card p-4 mb-4">
           <h2 className="font-semibold text-[#e0e7ff] mb-2">Blue Alliance&apos;dan etkinlik seç</h2>
           <div className="flex flex-wrap gap-2 mb-3">
+            <select
+              value={tbaYear}
+              onChange={(e) => setTbaYear(Number(e.target.value))}
+              className="input-field w-auto min-w-[5rem]"
+              aria-label="Sezon"
+            >
+              {[currentYear, currentYear + 1, currentYear - 1].map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
             <input
               type="text"
               value={tbaSearch}
               onChange={(e) => setTbaSearch(e.target.value)}
               placeholder="Bölge veya etkinlik ara (örn. Ankara, milac)"
-              className="input-field flex-1 min-w-[180px]"
+              className="input-field flex-1 min-w-[140px]"
             />
             <button
               type="button"
@@ -173,13 +184,18 @@ export default function EventsPage() {
           </div>
           {tbaError && <p className="text-red-500 text-sm mb-2">{tbaError}</p>}
           {tbaEventsAll.length === 0 && !tbaLoading && (
-            <p className="text-[#e0e7ff]/70 text-sm mb-2">Listele ile etkinlikleri getirin.</p>
+            <p className="text-[#e0e7ff]/70 text-sm mb-2">Yıl seçin ve Listele ile o sezondaki tüm etkinlikleri getirin.</p>
+          )}
+          {tbaEventsAll.length > 0 && !tbaLoading && (
+            <p className="text-[#e0e7ff]/70 text-sm mb-2">
+              {tbaSearch.trim() ? `${tbaEvents.length} sonuç (toplam ${tbaEventsAll.length})` : `${tbaEventsAll.length} etkinlik — aşağı kaydırın`}
+            </p>
           )}
           {tbaEventsAll.length > 0 && tbaSearch.trim() && tbaEvents.length === 0 && (
             <p className="text-[#e0e7ff]/70 text-sm mb-2">Aramanıza uygun etkinlik yok. Farklı bir kelime deneyin.</p>
           )}
           {tbaEvents.length > 0 && (
-            <ul className="max-h-64 overflow-y-auto space-y-1">
+            <ul className="max-h-[70vh] overflow-y-auto space-y-1 pr-1">
               {tbaEvents.map((ev) => (
                 <li key={ev.key}>
                   <button

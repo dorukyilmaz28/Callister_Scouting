@@ -24,7 +24,8 @@ export async function GET(request: Request) {
       );
     }
     const data = await res.json();
-    return NextResponse.json(data);
+    const list = Array.isArray(data) ? data : (data?.events ?? []) as unknown[];
+    return NextResponse.json(list);
   } catch (e) {
     return NextResponse.json({ error: "TBA events alınamadı" }, { status: 500 });
   }
