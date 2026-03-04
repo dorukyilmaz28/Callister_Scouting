@@ -78,6 +78,7 @@ export default function LiveScoresPage() {
   const [schedule, setSchedule] = useState<unknown>(null);
   const [rankings, setRankings] = useState<unknown>(null);
   const [teamNamesByNumber, setTeamNamesByNumber] = useState<Record<number, string>>({});
+  const [assignedTeamNumbers, setAssignedTeamNumbers] = useState<number[]>([]);
   const [scoutMatchList, setScoutMatchList] = useState<Array<{
     matchNumber: number;
     matchType: string;
@@ -93,11 +94,22 @@ export default function LiveScoresPage() {
 
   const rankingRows = normalizeRankings(rankings);
   const scheduleItems = normalizeSchedule(schedule);
+  const matchScoresByNumber = new Map(
+    matches.map((m, i) => [(m.matchNumber ?? (m["match number"] as number | undefined) ?? i + 1) as number, m])
+  );
+  const myTeamScheduleItems = scheduleItems.filter((item) =>
+    (item.teams ?? []).some((t) => assignedTeamNumbers.includes(t.teamNumber))
+  );
+  const myTeamMatchesWithScores = myTeamScheduleItems
+    .map((item) => ({ item, score: matchScoresByNumber.get(item.matchNumber ?? 0) }))
+    .filter((x) => x.score);
 
   useEffect(() => {
     fetch(`/api/events/${eventId}/dashboard`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((dash) => {
+        const teams = (dash?.teams ?? []) as Array<{ teamNumber: number }>;
+        setAssignedTeamNumbers(teams.map((t) => t.teamNumber));
         if (dash?.eventTbaEventKey) {
           return fetch(`/api/events/${eventId}/tba-teams`, { cache: "no-store" })
             .then((r) => (r.ok ? r.json() : []))
@@ -186,7 +198,7 @@ export default function LiveScoresPage() {
         </button>
       </div>
       <p className="text-sm text-[#e0e7ff]/70 mb-4">
-        FRC Events API (FMS) üzerinden resmi maç sonuçları. Etkinlik henüz başlamadıysa veya FMS senkron yapmadıysa veri görünmeyebilir.
+        FRC Events API (FMS) üzerinden resmi maç sonuçları. Tamamlanan tüm maçlar listelenir (sadece canlı yayın değil). Etkinlik henüz başlamadıysa veya FMS senkron yapmadıysa veri görünmeyebilir.
       </p>
 
       <div className="flex gap-2 mb-4">
@@ -231,48 +243,94 @@ export default function LiveScoresPage() {
               </p>
             </div>
           ) : matches.length > 0 ? (
-            <ul className="space-y-2">
-              {matches.map((m, i) => {
-                const num = m.matchNumber ?? (m["match number"] as number | undefined) ?? i + 1;
-                const red = m.redScore ?? m.redAuto ?? 0;
-                const blue = m.blueScore ?? m.blueAuto ?? 0;
-                const redDisplay = typeof red === "number" ? red : "—";
-                const blueDisplay = typeof blue === "number" ? blue : "—";
-                const winner =
-                  typeof red === "number" && typeof blue === "number"
-                    ? red > blue
-                      ? "Kırmızı"
-                      : blue > red
-                        ? "Mavi"
-                        : "Berabere"
-                    : null;
-                return (
-                  <li key={`${num}-${i}`}>
-                    <div className="card p-4 flex items-center justify-between gap-3 flex-wrap">
-                      <span className="font-semibold text-[#e0e7ff]">Maç {num}</span>
-                      <div className="flex items-center gap-4">
-                        <span className="text-red-400 font-medium">{redDisplay}</span>
-                        <span className="text-[#e0e7ff]/50">–</span>
-                        <span className="text-blue-400 font-medium">{blueDisplay}</span>
-                      </div>
-                      {winner && (
-                        <span
-                          className={`text-xs font-medium ${
-                            winner === "Kırmızı"
-                              ? "text-red-400"
-                              : winner === "Mavi"
-                                ? "text-blue-400"
-                                : "text-[#e0e7ff]/70"
-                          }`}
-                        >
-                          {winner}
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="space-y-4">
+              {myTeamMatchesWithScores.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-[#c7d2fe] mb-2">Takımınızın oynadığı maçlar</h3>
+                  <ul className="space-y-2">
+                    {myTeamMatchesWithScores.map(({ item, score: m }) => {
+                      const num = m?.matchNumber ?? item.matchNumber ?? 0;
+                      const red = (m?.redScore ?? m?.redAuto ?? 0) as number;
+                      const blue = (m?.blueScore ?? m?.blueAuto ?? 0) as number;
+                      const redDisplay = typeof red === "number" ? red : "—";
+                      const blueDisplay = typeof blue === "number" ? blue : "—";
+                      const winner =
+                        typeof red === "number" && typeof blue === "number"
+                          ? red > blue ? "Kırmızı" : blue > red ? "Mavi" : "Berabere"
+                          : null;
+                      return (
+                        <li key={`my-${num}`}>
+                          <div className="card p-4 flex items-center justify-between gap-3 flex-wrap border-[#6366f1]/40">
+                            <span className="font-semibold text-[#e0e7ff]">Maç {num}</span>
+                            <div className="flex items-center gap-4">
+                              <span className="text-red-400 font-medium">{redDisplay}</span>
+                              <span className="text-[#e0e7ff]/50">–</span>
+                              <span className="text-blue-400 font-medium">{blueDisplay}</span>
+                            </div>
+                            {winner && (
+                              <span
+                                className={`text-xs font-medium ${
+                                  winner === "Kırmızı" ? "text-red-400" : winner === "Mavi" ? "text-blue-400" : "text-[#e0e7ff]/70"
+                                }`}
+                              >
+                                {winner}
+                              </span>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+              <div>
+                {myTeamMatchesWithScores.length > 0 && (
+                  <h3 className="text-sm font-semibold text-[#e0e7ff]/80 mb-2">Tüm maçlar</h3>
+                )}
+                <ul className="space-y-2">
+                  {matches.map((m, i) => {
+                    const num = m.matchNumber ?? (m["match number"] as number | undefined) ?? i + 1;
+                    const red = m.redScore ?? m.redAuto ?? 0;
+                    const blue = m.blueScore ?? m.blueAuto ?? 0;
+                    const redDisplay = typeof red === "number" ? red : "—";
+                    const blueDisplay = typeof blue === "number" ? blue : "—";
+                    const winner =
+                      typeof red === "number" && typeof blue === "number"
+                        ? red > blue
+                          ? "Kırmızı"
+                          : blue > red
+                            ? "Mavi"
+                            : "Berabere"
+                        : null;
+                    return (
+                      <li key={`${num}-${i}`}>
+                        <div className="card p-4 flex items-center justify-between gap-3 flex-wrap">
+                          <span className="font-semibold text-[#e0e7ff]">Maç {num}</span>
+                          <div className="flex items-center gap-4">
+                            <span className="text-red-400 font-medium">{redDisplay}</span>
+                            <span className="text-[#e0e7ff]/50">–</span>
+                            <span className="text-blue-400 font-medium">{blueDisplay}</span>
+                          </div>
+                          {winner && (
+                            <span
+                              className={`text-xs font-medium ${
+                                winner === "Kırmızı"
+                                  ? "text-red-400"
+                                  : winner === "Mavi"
+                                    ? "text-blue-400"
+                                    : "text-[#e0e7ff]/70"
+                              }`}
+                            >
+                              {winner}
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
           ) : scoutMatchList && scoutMatchList.length > 0 ? (
             <div className="space-y-4">
               <p className="text-[#e0e7ff]/80 text-sm">
