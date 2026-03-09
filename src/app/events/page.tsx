@@ -60,6 +60,7 @@ export default function EventsPage() {
   function loadTbaEvents() {
     setTbaError("");
     setTbaLoading(true);
+    // TBA 2026 sabit
     fetch(`/api/tba/events?year=2026`)
       .then((r) => {
         if (!r.ok) throw new Error("TBA listesi alınamadı");
