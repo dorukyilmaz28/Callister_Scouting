@@ -16,6 +16,7 @@ type PitData = {
   drivetrainType: string;
   robotType: string;
   intakeType: string;
+  intakeDescription: string;
   shooterType: string;
   climbCapability: string;
   climbSystemDescription: string;
@@ -46,6 +47,7 @@ export default function PitScoutPage() {
     drivetrainType: "",
     robotType: "",
     intakeType: "",
+    intakeDescription: "",
     shooterType: "",
     climbCapability: "",
     climbSystemDescription: "",
@@ -97,7 +99,8 @@ export default function PitScoutPage() {
           setPit({
             drivetrainType: drv.base || (one.drivetrainType ?? ""),
             robotType: rob.base || (one.robotType ?? ""),
-            intakeType: inv.base === "other" ? "other" : "",
+            intakeType: inv.base === "other" ? "other" : (one.intakeType ?? ""),
+            intakeDescription: one.intakeDescription ?? "",
             shooterType: sh.base || (one.shooterType ?? ""),
             climbCapability:
               one.climbCapability === "low"
@@ -117,6 +120,7 @@ export default function PitScoutPage() {
             drivetrainType: "",
             robotType: "",
             intakeType: "",
+            intakeDescription: "",
             shooterType: "",
             climbCapability: "",
             climbSystemDescription: "",
@@ -151,6 +155,7 @@ export default function PitScoutPage() {
               : pit.drivetrainType,
           robotType: pit.robotType,
           intakeType,
+          intakeDescription: pit.intakeDescription?.trim() || null,
           shooterType:
             pit.shooterType === "other" && shooterOtherText.trim()
               ? `other|${shooterOtherText.trim()}`
@@ -298,6 +303,18 @@ export default function PitScoutPage() {
                 />
               </div>
             )}
+            <div className="pt-2">
+              <label className="block text-sm font-medium text-[#e0e7ff] mb-1.5">
+                Intake (yazı – açıklama / notlar)
+              </label>
+              <textarea
+                value={pit.intakeDescription}
+                onChange={(e) => setPit((p) => ({ ...p, intakeDescription: e.target.value }))}
+                rows={3}
+                className="input-field resize-none w-full"
+                placeholder="Intake tipi, nasıl çalıştığı, notlar…"
+              />
+            </div>
             <h2 className="font-semibold text-[#e0e7ff] pt-2">Shooter</h2>
             <div className="space-y-2">
               {SHOOTER_OPTIONS.map((o) => (

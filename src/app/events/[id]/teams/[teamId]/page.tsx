@@ -22,6 +22,7 @@ type Summary = {
     drivetrainType: string;
     robotType: string;
     intakeType: string | null;
+    intakeDescription: string | null;
     shooterType: string | null;
     climbCapability: string | null;
     climbSystemDescription: string | null;
@@ -313,7 +314,14 @@ export default function TeamSummaryPage() {
           <dl className="space-y-2 text-sm">
             <div><dt className="text-[#e0e7ff]/60">Drivetrain</dt><dd className="font-medium text-[#e0e7ff]">{pit.drivetrainType}</dd></div>
             <div><dt className="text-[#e0e7ff]/60">Robot tipi</dt><dd className="font-medium text-[#e0e7ff]">{pit.robotType}</dd></div>
-            {pit.intakeType && <div><dt className="text-[#e0e7ff]/60">Intake</dt><dd className="text-[#e0e7ff]">{pit.intakeType}</dd></div>}
+            {(pit.intakeType || pit.intakeDescription) && (
+              <div>
+                <dt className="text-[#e0e7ff]/60">Intake</dt>
+                <dd className="text-[#e0e7ff] whitespace-pre-wrap">
+                  {[pit.intakeType, pit.intakeDescription].filter(Boolean).join("\n")}
+                </dd>
+              </div>
+            )}
             {pit.shooterType && <div><dt className="text-[#e0e7ff]/60">Shooter</dt><dd className="text-[#e0e7ff]">{pit.shooterType}</dd></div>}
             {pit.climbCapability && <div><dt className="text-[#e0e7ff]/60">Tırmanma (seviye)</dt><dd className="text-[#e0e7ff]">{pit.climbCapability}</dd></div>}
             {pit.climbSystemDescription && (

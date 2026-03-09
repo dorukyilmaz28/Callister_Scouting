@@ -32,6 +32,25 @@ model User {
   matchScouts      MatchScout[]
   matchDataPosts   MatchDataPost[]
   createdEvents   Event[]       @relation("EventCreatedBy")
+  pushSubscriptions PushSubscription[]
+}
+
+// Web Push: kullanici + etkinlik bazli; ana ekrana eklenince bildirim icin
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  eventId    String   @map("event_id")
+  endpoint   String   @db.Text
+  p256dh     String   @db.Text
+  auth       String   @db.Text
+  lastNotifiedMatchesUntil Int? @map("last_notified_matches_until") // 2, 1 veya 0 - ayni durum icin tekrar gonderilmez
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
 }
 
 // Takım bazlı maç verisi görsel paylaşımı (grup duvarı) – imageUrl opsiyonel (metin paylaşımı için)
@@ -65,6 +84,7 @@ model Event {
   pitScouts        PitScout[]
   matches          Match[]
   matchScouts      MatchScout[]
+  pushSubscriptions PushSubscription[]
 }
 
 model Team {
@@ -110,6 +130,7 @@ model PitScout {
   drivetrainType    String   @map("drivetrain_type")  // swerve, tank, mecanum_drive, other
   robotType         String   @map("robot_type")       // kitbot, custom
   intakeType        String?  @map("intake_type")
+  intakeDescription String?  @map("intake_description") @db.Text
   shooterType       String?  @map("shooter_type")
   climbCapability       String?  @map("climb_capability")   // none, 1, 2, 3
   climbSystemDescription String?  @map("climb_system_description") @db.Text
