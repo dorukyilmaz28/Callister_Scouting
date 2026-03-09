@@ -66,7 +66,7 @@ export default function TeamsListPage() {
     <div className="app-shell pt-4">
       <h1 className="text-xl font-bold text-[#f0f0f0] mb-4">Takımlar · Verilere bak</h1>
 
-      <div className="mb-5">
+      <div className="card p-4 mb-5">
         <h2 className="text-sm font-semibold text-[#c7d2fe] mb-2">Callister AI</h2>
         <button
           type="button"
