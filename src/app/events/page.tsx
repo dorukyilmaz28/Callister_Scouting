@@ -28,6 +28,7 @@ export default function EventsPage() {
   const [tbaLoading, setTbaLoading] = useState(false);
   const [tbaAdding, setTbaAdding] = useState(false);
   const [tbaError, setTbaError] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const currentYear = new Date().getFullYear();
   const [tbaYear, setTbaYear] = useState(currentYear);
@@ -69,6 +70,22 @@ export default function EventsPage() {
       .then(setTbaEventsAll)
       .catch(() => setTbaError("TBA etkinlikleri yüklenemedi. API key kontrol edin."))
       .finally(() => setTbaLoading(false));
+  }
+
+  function deleteEvent(ev: Event, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`"${ev.name}" etkinliğini silmek istediğinize emin misiniz? Tüm maç ve scout verileri silinecektir.`)) return;
+    setDeletingId(ev.id);
+    fetch(`/api/events/${ev.id}`, { method: "DELETE" })
+      .then((r) => {
+        if (!r.ok) return r.json().then((d) => Promise.reject(new Error(d?.error ?? "Silinemedi")));
+        setEvents((prev) => prev.filter((e) => e.id !== ev.id));
+      })
+      .catch((err) => {
+        setTbaError(err.message ?? "Etkinlik silinemedi.");
+      })
+      .finally(() => setDeletingId(null));
   }
 
   function addFromTba(eventKey: string) {
@@ -221,8 +238,8 @@ export default function EventsPage() {
         <ul className="space-y-3">
           {events.map((ev) => (
             <li key={ev.id}>
-              <Link href={`/events/${ev.id}`} className="block">
-                <div className="card p-4 hover:border-[#3b82f6]/50">
+              <div className="card p-4 hover:border-[#3b82f6]/50 flex items-start justify-between gap-3">
+                <Link href={`/events/${ev.id}`} className="flex-1 min-w-0">
                   <div className="font-semibold text-[#e0e7ff]">{ev.name}</div>
                   <div className="text-sm text-[#e0e7ff]/85 mt-0.5">
                     {ev.code} · {ev.eventTeams?.length ?? 0} takım
@@ -232,8 +249,17 @@ export default function EventsPage() {
                     {new Date(ev.startDate).toLocaleDateString("tr-TR")} –{" "}
                     {new Date(ev.endDate).toLocaleDateString("tr-TR")}
                   </div>
-                </div>
-              </Link>
+                </Link>
+                <button
+                  type="button"
+                  onClick={(e) => deleteEvent(ev, e)}
+                  disabled={deletingId === ev.id}
+                  className="shrink-0 py-1.5 px-3 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+                  title="Etkinliği sil"
+                >
+                  {deletingId === ev.id ? "…" : "Sil"}
+                </button>
+              </div>
             </li>
           ))}
         </ul>

@@ -118,9 +118,39 @@ export default function TeamSummaryPage() {
     return lines.join("\n");
   }
 
+  const isMobile = typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
   function downloadPng(dataUrl: string) {
+    const filename = `team-${team.number}-veriler.png`;
+    if (isMobile && typeof navigator !== "undefined" && navigator.share) {
+      try {
+        const blob = dataUrlToBlob(dataUrl);
+        const file = new File([blob], filename, { type: "image/png" });
+        navigator.share({ files: [file], title: `Takım ${team.number} özeti` }).then(() => {
+          setImageDone(true);
+          setTimeout(() => setImageDone(false), 2000);
+        }).catch(() => fallbackDownloadLink(dataUrl, filename));
+      } catch {
+        fallbackDownloadLink(dataUrl, filename);
+      }
+    } else {
+      fallbackDownloadLink(dataUrl, filename);
+    }
+  }
+
+  function dataUrlToBlob(dataUrl: string): Blob {
+    const arr = dataUrl.split(",");
+    const mime = arr[0].match(/:(.*?);/)?.[1] ?? "image/png";
+    const bstr = atob(arr[1] ?? "");
+    let n = bstr.length;
+    const u8 = new Uint8Array(n);
+    while (n--) u8[n] = bstr.charCodeAt(n);
+    return new Blob([u8], { type: mime });
+  }
+
+  function fallbackDownloadLink(dataUrl: string, filename: string) {
     const link = document.createElement("a");
-    link.download = `team-${team.number}-veriler.png`;
+    link.download = filename;
     link.href = dataUrl;
     link.click();
     setImageDone(true);
@@ -133,20 +163,29 @@ export default function TeamSummaryPage() {
     const el = downloadRef.current;
     await new Promise((r) => setTimeout(r, 400));
 
+    const html2canvasOpts = {
+      backgroundColor: "#1a1e2e",
+      scale: Math.min(2, typeof window !== "undefined" ? (window.devicePixelRatio || 2) : 2),
+      logging: false,
+      useCORS: true,
+      allowTaint: true,
+    };
+
     try {
-      const dataUrl = await domtoimage.toPng(el, {
-        bgcolor: "#1a1e2e",
-        style: { backgroundColor: "#1a1e2e" },
-        quality: 1,
-      });
-      downloadPng(dataUrl);
+      if (isMobile) {
+        const canvas = await html2canvas(el, html2canvasOpts);
+        downloadPng(canvas.toDataURL("image/png"));
+      } else {
+        const dataUrl = await domtoimage.toPng(el, {
+          bgcolor: "#1a1e2e",
+          style: { backgroundColor: "#1a1e2e" },
+          quality: 1,
+        });
+        downloadPng(dataUrl);
+      }
     } catch {
       try {
-        const canvas = await html2canvas(el, {
-          backgroundColor: "#1a1e2e",
-          scale: 1.5,
-          logging: false,
-        });
+        const canvas = await html2canvas(el, html2canvasOpts);
         downloadPng(canvas.toDataURL("image/png"));
       } catch (e) {
         console.error("PNG export", e);
