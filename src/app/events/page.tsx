@@ -30,8 +30,6 @@ export default function EventsPage() {
   const [tbaError, setTbaError] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const currentYear = new Date().getFullYear();
-  const [tbaYear, setTbaYear] = useState(currentYear);
   const tbaEvents = tbaSearch.trim()
     ? tbaEventsAll.filter(
         (ev) =>
@@ -62,7 +60,7 @@ export default function EventsPage() {
   function loadTbaEvents() {
     setTbaError("");
     setTbaLoading(true);
-    fetch(`/api/tba/events?year=${tbaYear}`)
+    fetch(`/api/tba/events?year=2026`)
       .then((r) => {
         if (!r.ok) throw new Error("TBA listesi alınamadı");
         return r.json();
@@ -166,16 +164,6 @@ export default function EventsPage() {
         <div className="card p-4 mb-4">
           <h2 className="font-semibold text-[#e0e7ff] mb-2">Blue Alliance&apos;dan etkinlik seç</h2>
           <div className="flex flex-wrap gap-2 mb-3">
-            <select
-              value={tbaYear}
-              onChange={(e) => setTbaYear(Number(e.target.value))}
-              className="input-field w-auto min-w-[5rem]"
-              aria-label="Sezon"
-            >
-              {[currentYear, currentYear + 1, currentYear - 1].map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
             <input
               type="text"
               value={tbaSearch}
@@ -201,7 +189,7 @@ export default function EventsPage() {
           </div>
           {tbaError && <p className="text-red-500 text-sm mb-2">{tbaError}</p>}
           {tbaEventsAll.length === 0 && !tbaLoading && (
-            <p className="text-[#e0e7ff]/70 text-sm mb-2">Yıl seçin ve Listele ile o sezondaki tüm etkinlikleri getirin.</p>
+            <p className="text-[#e0e7ff]/70 text-sm mb-2">Listele ile 2026 etkinliklerini getirin.</p>
           )}
           {tbaEventsAll.length > 0 && !tbaLoading && (
             <p className="text-[#e0e7ff]/70 text-sm mb-2">
