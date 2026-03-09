@@ -101,7 +101,6 @@ export default function MatchScoutPage() {
     const tn = teamNumber.trim();
     if (!mn || !tn) {
       setForm(bosForm);
-      setClimbTypeOtherText("");
       return;
     }
     const numMn = parseInt(mn, 10);
