@@ -13,6 +13,9 @@ export default function TeamsListPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [isScout, setIsScout] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -40,9 +43,52 @@ export default function TeamsListPage() {
     );
   }
 
+  async function runAiAnalyze() {
+    setAiLoading(true);
+    setAiError(null);
+    setAiAnalysis(null);
+    try {
+      const res = await fetch(`/api/events/${eventId}/ai-analyze`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setAiError(data?.error ?? "Analiz alınamadı.");
+        return;
+      }
+      setAiAnalysis(data.analysis ?? "");
+    } catch {
+      setAiError("Bağlantı hatası.");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   return (
     <div className="app-shell pt-4">
       <h1 className="text-xl font-bold text-[#f0f0f0] mb-4">Takımlar · Verilere bak</h1>
+
+      <div className="mb-5">
+        <h2 className="text-sm font-semibold text-[#c7d2fe] mb-2">Callister AI</h2>
+        <button
+          type="button"
+          onClick={runAiAnalyze}
+          disabled={aiLoading}
+          className="w-full sm:w-auto py-3 px-5 rounded-xl bg-[#6366f1] text-white font-medium hover:bg-[#4f46e5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {aiLoading ? "Analiz ediyor…" : "Maçları scout ettikten sonra Callister AI ile analiz et"}
+        </button>
+        {aiError && (
+          <p className="mt-2 text-sm text-red-400">{aiError}</p>
+        )}
+        {aiAnalysis && (
+          <div className="mt-4 card p-4 border-[#6366f1]/40">
+            <h2 className="font-semibold text-[#c7d2fe] mb-2">Callister AI analizi</h2>
+            <div className="text-sm text-[#e0e7ff]/90 whitespace-pre-wrap leading-relaxed">
+              {aiAnalysis}
+            </div>
+          </div>
+        )}
+      </div>
+
       {teams.length === 0 ? (
         <div className="card p-5">
           {isScout ? (

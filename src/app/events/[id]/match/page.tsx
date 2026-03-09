@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { RATING_1_5, CLIMB_TYPE_OPTIONS, MATCH_TYPE_OPTIONS } from "@/lib/constants";
+import { RATING_1_5, CLIMB_LEVEL_OPTIONS, MATCH_TYPE_OPTIONS } from "@/lib/constants";
 import { AutonomousRouteEditor, type Waypoint } from "@/components/AutonomousRouteEditor";
 
 type MatchScout = {
@@ -77,8 +77,6 @@ export default function MatchScoutPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
-  /** climbType "Diğer" seçildiğinde kullanıcının yazdığı metin */
-  const [climbTypeOtherText, setClimbTypeOtherText] = useState("");
 
   useEffect(() => {
     fetch(`/api/events/${eventId}/dashboard`)
@@ -116,9 +114,7 @@ export default function MatchScoutPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((one) => {
         if (one) {
-          const ct = String(one.climbType ?? "");
-          const climbBase = ct.startsWith("other|") ? "other" : (one.climbType ?? null);
-          const climbCustom = ct.startsWith("other|") ? ct.slice(6) : "";
+          const ct = one.climbType ?? null;
           setForm({
             autoAttempted: one.autoAttempted ?? false,
             autoScoreCount: one.autoScoreCount ?? 0,
@@ -129,7 +125,7 @@ export default function MatchScoutPage() {
             defensePlayed: one.defensePlayed ?? false,
             climbAttempted: one.climbAttempted ?? false,
             climbSuccess: one.climbSuccess ?? false,
-            climbType: climbBase,
+            climbType: ct === "1" || ct === "2" || ct === "3" || ct === "none" ? ct : null,
             requestedStrategy: one.requestedStrategy ?? null,
             driverSkill: one.driverSkill ?? null,
             scoutComments: one.scoutComments ?? null,
@@ -137,15 +133,12 @@ export default function MatchScoutPage() {
               ? one.autonomousRouteWaypoints
               : null,
           });
-          setClimbTypeOtherText(climbCustom);
         } else {
           setForm(bosForm);
-          setClimbTypeOtherText("");
         }
       })
       .catch(() => {
         setForm({ ...bosForm, autonomousRouteWaypoints: null });
-        setClimbTypeOtherText("");
       })
       .finally(() => setLoading(false));
   }, [eventId, matchNumber, teamNumber, matchType]);
@@ -171,10 +164,7 @@ export default function MatchScoutPage() {
           matchType,
           ...form,
           autonomousRouteWaypoints: form.autonomousRouteWaypoints ?? undefined,
-          climbType:
-            form.climbType === "other" && climbTypeOtherText.trim()
-              ? `other|${climbTypeOtherText.trim()}`
-              : form.climbType,
+          climbType: form.climbType || undefined,
         }),
       });
       const data = await res.json();
@@ -307,7 +297,7 @@ export default function MatchScoutPage() {
             />
           </div>
 
-          <h2 className="font-semibold text-[#e0e7ff] pt-2">Otonom rotası (isteğe bağlı)</h2>
+          <h2 className="font-semibold text-[#e0e7ff] pt-2">Otonom rotası</h2>
           <AutonomousRouteEditor
             waypoints={form.autonomousRouteWaypoints ?? []}
             onChange={(wp) => setForm((f) => ({ ...f, autonomousRouteWaypoints: wp.length ? wp : null }))}
@@ -356,31 +346,17 @@ export default function MatchScoutPage() {
             <span>Başarılı</span>
           </label>
           <div>
-            <label className="block text-sm font-medium text-[#e0e7ff] mb-2">Tip</label>
+            <label className="block text-sm font-medium text-[#e0e7ff] mb-2">Tırmanma seviyesi</label>
             <select
               value={form.climbType ?? ""}
               onChange={(e) => setForm((f) => ({ ...f, climbType: e.target.value || null }))}
               className="input-field"
             >
               <option value="">—</option>
-              {CLIMB_TYPE_OPTIONS.map((o) => (
+              {CLIMB_LEVEL_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
-            {form.climbType === "other" && (
-              <div className="mt-2">
-                <label className="block text-sm font-medium text-[#e0e7ff] mb-1.5">
-                  Diğer (Climb tipi) – ne yazayım?
-                </label>
-                <input
-                  type="text"
-                  value={climbTypeOtherText}
-                  onChange={(e) => setClimbTypeOtherText(e.target.value)}
-                  placeholder="Örn: Özel bar, Park only"
-                  className="input-field"
-                />
-              </div>
-            )}
           </div>
 
           <h2 className="font-semibold text-[#e0e7ff] pt-2">Sürücü becerisi</h2>

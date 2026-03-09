@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   DRIVETRAIN_OPTIONS,
   ROBOT_TYPE_OPTIONS,
-  INTAKE_OPTIONS,
   SHOOTER_OPTIONS,
   CLIMB_LEVEL_OPTIONS,
 } from "@/lib/constants";
@@ -57,9 +56,7 @@ export default function PitScoutPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
-  /** "Diğer" / "Özel" seçildiğinde kullanıcının yazdığı metin */
   const [drivetrainOtherText, setDrivetrainOtherText] = useState("");
-  const [intakeOtherText, setIntakeOtherText] = useState("");
   const [shooterOtherText, setShooterOtherText] = useState("");
 
   useEffect(() => {
@@ -92,14 +89,13 @@ export default function PitScoutPage() {
       .then((data) => {
         const one = Array.isArray(data) ? data[0] : data;
         if (one) {
-          const inv = parseOther(one.intakeType ?? "");
           const drv = parseOther(one.drivetrainType ?? "");
           const sh = parseOther(one.shooterType ?? "");
           const rob = parseOther(one.robotType ?? "");
           setPit({
             drivetrainType: drv.base || (one.drivetrainType ?? ""),
             robotType: rob.base || (one.robotType ?? ""),
-            intakeType: inv.base === "other" ? "other" : (one.intakeType ?? ""),
+            intakeType: "",
             intakeDescription: one.intakeDescription ?? "",
             shooterType: sh.base || (one.shooterType ?? ""),
             climbCapability:
@@ -113,7 +109,6 @@ export default function PitScoutPage() {
             scoutObservations: one.scoutObservations ?? "",
           });
           setDrivetrainOtherText(drv.custom);
-          setIntakeOtherText(inv.custom);
           setShooterOtherText(sh.custom);
         } else {
           setPit({
@@ -128,7 +123,6 @@ export default function PitScoutPage() {
             scoutObservations: "",
           });
           setDrivetrainOtherText("");
-          setIntakeOtherText("");
           setShooterOtherText("");
         }
       });
@@ -136,10 +130,6 @@ export default function PitScoutPage() {
 
   async function save() {
     if (!teamId) return;
-    const intakeType =
-      pit.intakeType === "other"
-        ? (intakeOtherText.trim() ? `other|${intakeOtherText.trim()}` : "other")
-        : null;
     setSaving(true);
     setMessage(null);
     try {
@@ -154,7 +144,7 @@ export default function PitScoutPage() {
               ? `other|${drivetrainOtherText.trim()}`
               : pit.drivetrainType,
           robotType: pit.robotType,
-          intakeType,
+          intakeType: null,
           intakeDescription: pit.intakeDescription?.trim() || null,
           shooterType:
             pit.shooterType === "other" && shooterOtherText.trim()
@@ -272,38 +262,7 @@ export default function PitScoutPage() {
         {step === 2 && (
           <>
             <h2 className="font-semibold text-[#e0e7ff]">Intake</h2>
-            <div className="space-y-2">
-              {INTAKE_OPTIONS.map((o) => (
-                <label
-                  key={o.value || "none"}
-                  className={`option-row w-full ${pit.intakeType === o.value ? "selected" : ""}`}
-                >
-                  <input
-                    type="radio"
-                    name="intake"
-                    checked={pit.intakeType === o.value}
-                    onChange={() => setPit((p) => ({ ...p, intakeType: o.value }))}
-                    className="touch"
-                  />
-                  <span>{o.label}</span>
-                </label>
-              ))}
-            </div>
-            {pit.intakeType === "other" && (
-              <div className="pt-2">
-                <label className="block text-sm font-medium text-[#e0e7ff] mb-1.5">
-                  Özel (Intake) – ne yazayım?
-                </label>
-                <input
-                  type="text"
-                  value={intakeOtherText}
-                  onChange={(e) => setIntakeOtherText(e.target.value)}
-                  placeholder="Örn: Kendi chassi, Hibrit"
-                  className="input-field"
-                />
-              </div>
-            )}
-            <div className="pt-2">
+            <div className="pt-1">
               <label className="block text-sm font-medium text-[#e0e7ff] mb-1.5">
                 Intake (yazı – açıklama / notlar)
               </label>

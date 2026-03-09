@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { MatchNotificationSubscribe } from "@/components/MatchNotificationSubscribe";
 
 type MatchScoreRow = {
   matchNumber?: number;
@@ -239,6 +240,14 @@ export default function LiveScoresPage() {
       <p className="text-sm text-[#e0e7ff]/70 mb-4">
         FRC Events API (FMS) üzerinden resmi maç sonuçları. Tamamlanan tüm maçlar listelenir (sadece canlı yayın değil). Etkinlik henüz başlamadıysa veya FMS senkron yapmadıysa veri görünmeyebilir.
       </p>
+
+      <div className="mb-5">
+        <MatchNotificationSubscribe
+          eventId={eventId}
+          eventName={null}
+          hasAssignedTeams={assignedTeamNumbers.length > 0}
+        />
+      </div>
 
       <div className="flex gap-2 mb-4">
         {(["scores", "schedule", "rankings"] as const).map((tab) => (
