@@ -16,9 +16,16 @@ function getMessage(matchesUntil: number, teamNumber: number): string {
 }
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
   const secret = process.env.CRON_SECRET;
-  if (!secret || authHeader !== `Bearer ${secret}`)
+  if (!secret)
+    return NextResponse.json({ error: "CRON_SECRET not set" }, { status: 503 });
+
+  // cron-job.org: ?secret=XXX veya header Authorization: Bearer XXX
+  const authHeader = request.headers.get("authorization");
+  const url = new URL(request.url);
+  const querySecret = url.searchParams.get("secret");
+  const valid = querySecret === secret || authHeader === `Bearer ${secret}`;
+  if (!valid)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const vapidPublic = process.env.VAPID_PUBLIC_KEY;
