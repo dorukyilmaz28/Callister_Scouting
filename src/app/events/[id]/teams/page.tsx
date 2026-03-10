@@ -79,14 +79,6 @@ export default function TeamsListPage() {
     });
   }, [eventId]);
 
-  if (loading) {
-    return (
-      <div className="app-shell flex justify-center py-12">
-        <p className="text-[#e0e7ff]/80">Takımlar yükleniyor…</p>
-      </div>
-    );
-  }
-
   const runAiAnalyze = useCallback(async () => {
     setAiLoading(true);
     setAiError(null);
@@ -105,6 +97,14 @@ export default function TeamsListPage() {
       setAiLoading(false);
     }
   }, [eventId]);
+
+  if (loading) {
+    return (
+      <div className="app-shell flex justify-center py-12">
+        <p className="text-[#e0e7ff]/80">Takımlar yükleniyor…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell pt-4">
