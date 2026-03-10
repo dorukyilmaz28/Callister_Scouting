@@ -7,6 +7,16 @@ import Link from "next/link";
 type Team = { id: string; number: number; name: string | null };
 type Assignment = { teamId: string };
 
+function mdToHtml(md: string): string {
+  return md
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/^### (.+)$/gm, '<h4 class="font-semibold text-[#c7d2fe] mt-3 mb-1">$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3 class="font-semibold text-[#c7d2fe] mt-4 mb-1 text-base">$1</h3>')
+    .replace(/^# (.+)$/gm, '<h2 class="font-bold text-[#c7d2fe] mt-4 mb-1 text-lg">$1</h2>')
+    .replace(/\n/g, "<br />");
+}
+
 export default function TeamsListPage() {
   const params = useParams();
   const eventId = params.id as string;
@@ -123,12 +133,13 @@ export default function TeamsListPage() {
       {aiFullText && !aiLoading && (
         <div className="mb-5 p-4 rounded-xl bg-[#1e1e42] border border-[#6366f1]/40">
           <h2 className="font-semibold text-[#c7d2fe] mb-2">Callister AI analizi</h2>
-          <div className="text-sm text-[#e0e7ff]/90 whitespace-pre-wrap leading-relaxed break-words">
-            {aiDisplayed}
-            {aiDisplayed.length < aiFullText.length && (
-              <span className="inline-block w-0.5 h-4 bg-[#c7d2fe] animate-pulse ml-px align-text-bottom" />
-            )}
-          </div>
+          <div
+            className="text-sm text-[#e0e7ff]/90 leading-relaxed break-words [&_strong]:font-semibold [&_strong]:text-[#e0e7ff] [&_em]:italic"
+            dangerouslySetInnerHTML={{ __html: mdToHtml(aiDisplayed) }}
+          />
+          {aiDisplayed.length < aiFullText.length && (
+            <span className="inline-block w-0.5 h-4 bg-[#c7d2fe] animate-pulse ml-px align-text-bottom" />
+          )}
         </div>
       )}
 
