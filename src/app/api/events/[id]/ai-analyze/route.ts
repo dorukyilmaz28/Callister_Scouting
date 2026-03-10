@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+export const maxDuration = 60;
+
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 function buildScoutSummary(event: {
   name: string;
@@ -135,6 +137,7 @@ export async function POST(
           temperature: 0.4,
         },
       }),
+      signal: AbortSignal.timeout(50000),
     });
 
     if (!res.ok) {

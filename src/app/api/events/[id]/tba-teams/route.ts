@@ -11,8 +11,9 @@ export async function GET(
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const key = process.env.TBA_API_KEY;
-    if (!key) return NextResponse.json({ error: "TBA API key yok" }, { status: 500 });
+    if (!key) return NextResponse.json([], { status: 200 });
 
     const { id: eventId } = await params;
     const event = await prisma.event.findUnique({
@@ -25,14 +26,21 @@ export async function GET(
 
     const res = await fetch(
       `${TBA_BASE}/event/${encodeURIComponent(event.tbaEventKey)}/teams`,
-      { headers: { "X-TBA-Auth-Key": key } }
+      {
+        headers: { "X-TBA-Auth-Key": key },
+        signal: AbortSignal.timeout(10000),
+      }
     );
-    if (!res.ok) return NextResponse.json([]);
+    if (!res.ok) {
+      console.warn("[tba-teams]", res.status, await res.text().catch(() => ""));
+      return NextResponse.json([]);
+    }
     const tbaTeams = (await res.json()) as { team_number: number; nickname?: string }[];
     return NextResponse.json(
       tbaTeams.map((t) => ({ team_number: t.team_number, nickname: t.nickname ?? null }))
     );
   } catch (e) {
+    console.error("[tba-teams]", e);
     return NextResponse.json([], { status: 200 });
   }
 }
