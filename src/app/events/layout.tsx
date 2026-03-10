@@ -55,7 +55,7 @@ export default function EventsLayout({
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#0f0f23] via-[#1a1a3e] to-[#0f0f23]">
       <header className="sticky top-0 z-10 bg-[#0f0f23]/95 backdrop-blur border-b border-white/10">
-        <div className="max-w-[400px] mx-auto flex items-center justify-between gap-2 px-3 py-2">
+        <div className="max-w-[480px] mx-auto flex items-center justify-between gap-2 px-3 py-2">
           <Link href="/events" className="font-semibold text-[#f0f0f5] truncate text-sm">
             Callister 9024 · FRC 2026
           </Link>
@@ -71,7 +71,7 @@ export default function EventsLayout({
           </button>
         </div>
         {eventId && (
-          <div className="max-w-[400px] mx-auto flex gap-2 overflow-x-auto px-3 pb-2">
+          <div className="max-w-[480px] mx-auto flex gap-2 overflow-x-auto px-3 pb-2">
             {navLink(`/events/${eventId}`, "Ana")}
             {navLink(`/events/${eventId}/pit`, "Pit")}
             {navLink(`/events/${eventId}/match`, "Match")}
