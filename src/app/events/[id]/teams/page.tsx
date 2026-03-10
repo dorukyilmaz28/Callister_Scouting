@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
@@ -14,39 +14,13 @@ function ThinkingDots() {
     return () => clearInterval(id);
   }, []);
   return (
-    <div className="mt-4 card p-4 border-[#6366f1]/40">
+    <div className="mt-4 p-4 rounded-xl bg-[#1e1e42] border border-[#6366f1]/40">
       <div className="flex items-center gap-2">
         <div className="w-5 h-5 rounded-full bg-[#6366f1] animate-pulse" />
         <span className="text-sm text-[#c7d2fe] font-medium">
           Callister AI düşünüyor{dots}
         </span>
       </div>
-    </div>
-  );
-}
-
-function Typewriter({ text, speed = 12 }: { text: string; speed?: number }) {
-  const [displayed, setDisplayed] = useState("");
-  const idx = useRef(0);
-
-  useEffect(() => {
-    idx.current = 0;
-    setDisplayed("");
-    const id = setInterval(() => {
-      idx.current += 1;
-      const chunk = text.slice(0, idx.current);
-      setDisplayed(chunk);
-      if (idx.current >= text.length) clearInterval(id);
-    }, speed);
-    return () => clearInterval(id);
-  }, [text, speed]);
-
-  return (
-    <div className="text-sm text-[#e0e7ff]/90 whitespace-pre-wrap leading-relaxed">
-      {displayed}
-      {displayed.length < text.length && (
-        <span className="inline-block w-[2px] h-4 bg-[#c7d2fe] animate-pulse ml-0.5 align-text-bottom" />
-      )}
     </div>
   );
 }
@@ -79,7 +53,7 @@ export default function TeamsListPage() {
     });
   }, [eventId]);
 
-  const runAiAnalyze = useCallback(async () => {
+  async function runAiAnalyze() {
     setAiLoading(true);
     setAiError(null);
     setAiAnalysis(null);
@@ -96,7 +70,7 @@ export default function TeamsListPage() {
     } finally {
       setAiLoading(false);
     }
-  }, [eventId]);
+  }
 
   if (loading) {
     return (
@@ -124,13 +98,16 @@ export default function TeamsListPage() {
           <p className="mt-2 text-sm text-red-400">{aiError}</p>
         )}
         {aiLoading && <ThinkingDots />}
-        {aiAnalysis && !aiLoading && (
-          <div className="mt-4 card p-4 border-[#6366f1]/40">
-            <h2 className="font-semibold text-[#c7d2fe] mb-2">Callister AI analizi</h2>
-            <Typewriter text={aiAnalysis} speed={12} />
-          </div>
-        )}
       </div>
+
+      {aiAnalysis && !aiLoading && (
+        <div className="mb-5 p-4 rounded-xl bg-[#1e1e42] border border-[#6366f1]/40">
+          <h2 className="font-semibold text-[#c7d2fe] mb-2">Callister AI analizi</h2>
+          <p className="text-sm text-[#e0e7ff]/90 whitespace-pre-wrap leading-relaxed break-words">
+            {aiAnalysis}
+          </p>
+        </div>
+      )}
 
       {teams.length === 0 ? (
         <div className="card p-5">
