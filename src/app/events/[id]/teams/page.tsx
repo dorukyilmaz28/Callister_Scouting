@@ -80,7 +80,7 @@ export default function TeamsListPage() {
           <p className="mt-2 text-sm text-red-400">{aiError}</p>
         )}
         {aiAnalysis && (
-          <div className="mt-4 card p-4 border-[#6366f1]/40">
+          <div className="mt-4 card p-4 border-[#6366f1]/40 max-h-[60vh] overflow-y-auto">
             <h2 className="font-semibold text-[#c7d2fe] mb-2">Callister AI analizi</h2>
             <div className="text-sm text-[#e0e7ff]/90 whitespace-pre-wrap leading-relaxed">
               {aiAnalysis}
