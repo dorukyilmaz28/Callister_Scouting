@@ -40,7 +40,7 @@ body {
 
 /* Tek kolon, max 400px ortalanmış içerik (Callister geniş kartlar) */
 .app-shell {
-  max-width: 400px;
+  max-width: 480px;
   margin: 0 auto;
   min-height: 100vh;
   padding: 0 1rem 2rem;
