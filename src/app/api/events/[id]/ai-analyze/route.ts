@@ -133,7 +133,7 @@ export async function POST(
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
-          maxOutputTokens: 1024,
+          maxOutputTokens: 2048,
           temperature: 0.4,
         },
       }),
