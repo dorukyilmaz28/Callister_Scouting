@@ -125,7 +125,7 @@ export async function POST(
       });
     }
 
-    const prompt = `Sen FRC (FIRST Robotics Competition) scout verilerini analiz eden "Callister AI" asistanısın. Aşağıdaki pit ve maç scout verilerini inceleyip Türkçe, kısa ve öz bir analiz yaz: hangi takımlar öne çıkıyor, güçlü/zayıf yönler, takım taktikleri veya notlar hakkında yorum yap. Sadece verilen verilere dayan. 2–4 paragraf yeterli.\n\n---\n\n${summary}`;
+    const prompt = `Sen FRC (FIRST Robotics Competition) scout verilerini analiz eden "Callister AI" asistanısın. Aşağıdaki pit ve maç scout verilerini inceleyip Türkçe, kısa ve öz bir analiz yaz: hangi takımlar öne çıkıyor, güçlü/zayıf yönler, takım taktikleri veya notlar hakkında yorum yap. Sadece verilen verilere dayan. Yanıtını 2–3 paragrafta tamamla, kesinlikle yarıda bırakma.\n\n---\n\n${summary}`;
 
     const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(key)}`, {
       method: "POST",
@@ -133,7 +133,7 @@ export async function POST(
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
-          maxOutputTokens: 2048,
+          maxOutputTokens: 3000,
           temperature: 0.4,
         },
       }),
