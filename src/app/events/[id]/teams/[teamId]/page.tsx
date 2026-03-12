@@ -164,34 +164,42 @@ export default function TeamSummaryPage() {
     const el = downloadRef.current;
     await new Promise((r) => setTimeout(r, 400));
 
-    const html2canvasOpts = {
-      backgroundColor: "#1a1e2e",
-      scale: Math.min(2, typeof window !== "undefined" ? (window.devicePixelRatio || 2) : 2),
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-    };
-
     try {
-      if (isMobile) {
-        const canvas = await html2canvas(el, html2canvasOpts);
-        downloadPng(canvas.toDataURL("image/png"));
+      const canvas = await html2canvas(el, {
+        backgroundColor: "#1a1e2e",
+        scale: 2,
+        logging: false,
+        useCORS: true,
+      });
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), "image/png")
+      );
+      if (!blob) {
+        setShareError("PNG oluşturulamadı.");
+        return;
+      }
+      const filename = `team-${team.number}-veriler.png`;
+
+      if (isMobile && navigator.canShare?.({ files: [new File([blob], filename, { type: "image/png" })] })) {
+        const file = new File([blob], filename, { type: "image/png" });
+        await navigator.share({ files: [file], title: `Takım ${team.number} özeti` });
+        setImageDone(true);
+        setTimeout(() => setImageDone(false), 2000);
       } else {
-        const dataUrl = await domtoimage.toPng(el, {
-          bgcolor: "#1a1e2e",
-          style: { backgroundColor: "#1a1e2e" },
-          quality: 1,
-        });
-        downloadPng(dataUrl);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        setImageDone(true);
+        setTimeout(() => setImageDone(false), 2000);
       }
-    } catch {
-      try {
-        const canvas = await html2canvas(el, html2canvasOpts);
-        downloadPng(canvas.toDataURL("image/png"));
-      } catch (e) {
-        console.error("PNG export", e);
-        setShareError("PNG indirilemedi. Sayfayı yenileyip tekrar deneyin.");
-      }
+    } catch (e) {
+      console.error("PNG export", e);
+      setShareError("PNG indirilemedi. Sayfayı yenileyip tekrar deneyin.");
     }
   }
 

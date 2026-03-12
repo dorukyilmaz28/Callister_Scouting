@@ -344,10 +344,16 @@ export default function LiveScoresPage() {
                       red != null && blue != null
                         ? red > blue ? "Kırmızı" : blue > red ? "Mavi" : "Berabere"
                         : null;
+                    const isMyMatch = myTeamMatchesWithScores.some(
+                      (x) => (x.item.matchNumber ?? 0) === num
+                    );
                     return (
                       <li key={`${num}-${i}`}>
-                        <div className="card p-4 flex items-center justify-between gap-3 flex-wrap">
-                          <span className="font-semibold text-[#e0e7ff]">Maç {num}</span>
+                        <div className={`card p-4 flex items-center justify-between gap-3 flex-wrap ${isMyMatch ? "border-[#6366f1] bg-[#6366f1]/10" : ""}`}>
+                          <span className="font-semibold text-[#e0e7ff]">
+                            Maç {num}
+                            {isMyMatch && <span className="ml-2 text-xs text-[#a5b4fc]">★ Senin maçın</span>}
+                          </span>
                           <div className="flex items-center gap-4">
                             <span className="text-red-400 font-medium">{redDisplay}</span>
                             <span className="text-[#e0e7ff]/50">–</span>
