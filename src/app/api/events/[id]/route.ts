@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getSession, requireRole } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 
 export async function GET(
   _request: Request,
@@ -41,9 +41,10 @@ export async function DELETE(
     });
     if (!event) return NextResponse.json({ error: "Etkinlik bulunamadı" }, { status: 404 });
 
-    const isAdmin = await requireRole("admin").then(() => true).catch(() => false);
+    const user = await prisma.user.findUnique({ where: { id: session.id }, select: { role: true } });
+    const isAdminOrStrategy = user?.role === "admin" || user?.role === "strategy";
     const isCreator = event.createdByUserId === session.id;
-    if (!isAdmin && !isCreator)
+    if (!isAdminOrStrategy && !isCreator)
       return NextResponse.json({ error: "Bu etkinliği silemezsiniz." }, { status: 403 });
 
     await prisma.event.delete({ where: { id } });

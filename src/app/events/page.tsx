@@ -82,7 +82,7 @@ export default function EventsPage() {
         setEvents((prev) => prev.filter((e) => e.id !== ev.id));
       })
       .catch((err) => {
-        setTbaError(err.message ?? "Etkinlik silinemedi.");
+        alert(err.message ?? "Etkinlik silinemedi.");
       })
       .finally(() => setDeletingId(null));
   }
