@@ -294,7 +294,9 @@ export default function LiveScoresPage() {
             <div className="space-y-4">
               {myTeamMatchesWithScores.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-[#c7d2fe] mb-2">Takımınızın oynadığı maçlar</h3>
+                  <h3 className="text-sm font-semibold text-[#c7d2fe] mb-2">
+                    Takımınızın oynadığı maçlar
+                  </h3>
                   <ul className="space-y-2">
                     {myTeamMatchesWithScores.map(({ item, score: m }) => {
                       const num = m?.matchNumber ?? item.matchNumber ?? 0;
@@ -303,25 +305,70 @@ export default function LiveScoresPage() {
                       const blueDisplay = blue ?? m?.blueAuto ?? "—";
                       const winner =
                         red != null && blue != null
-                          ? red > blue ? "Kırmızı" : blue > red ? "Mavi" : "Berabere"
+                          ? red > blue
+                            ? "Kırmızı"
+                            : blue > red
+                              ? "Mavi"
+                              : "Berabere"
                           : null;
+                      const myTeamsInMatch = (item.teams ?? []).filter((t) =>
+                        assignedTeamNumbers.includes(t.teamNumber)
+                      );
                       return (
                         <li key={`my-${num}`}>
-                          <div className="card p-4 flex items-center justify-between gap-3 flex-wrap border-[#6366f1]/40">
-                            <span className="font-semibold text-[#e0e7ff]">Maç {num}</span>
-                            <div className="flex items-center gap-4">
-                              <span className="text-red-400 font-medium">{redDisplay}</span>
-                              <span className="text-[#e0e7ff]/50">–</span>
-                              <span className="text-blue-400 font-medium">{blueDisplay}</span>
+                          <div className="card p-4 flex flex-col gap-2 border-[#6366f1]/40">
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                              <span className="font-semibold text-[#e0e7ff]">Maç {num}</span>
+                              <div className="flex items-center gap-4">
+                                <span className="text-red-400 font-medium">{redDisplay}</span>
+                                <span className="text-[#e0e7ff]/50">–</span>
+                                <span className="text-blue-400 font-medium">{blueDisplay}</span>
+                              </div>
+                              {winner && (
+                                <span
+                                  className={`text-xs font-medium ${
+                                    winner === "Kırmızı"
+                                      ? "text-red-400"
+                                      : winner === "Mavi"
+                                        ? "text-blue-400"
+                                        : "text-[#e0e7ff]/70"
+                                  }`}
+                                >
+                                  {winner}
+                                </span>
+                              )}
                             </div>
-                            {winner && (
-                              <span
-                                className={`text-xs font-medium ${
-                                  winner === "Kırmızı" ? "text-red-400" : winner === "Mavi" ? "text-blue-400" : "text-[#e0e7ff]/70"
-                                }`}
-                              >
-                                {winner}
-                              </span>
+                            {myTeamsInMatch.length > 0 && (
+                              <div className="text-xs text-[#e0e7ff]/80">
+                                <span className="font-medium text-[#a5b4fc] mr-1">
+                                  Senin takımların:
+                                </span>
+                                {myTeamsInMatch.map((t, idx) => {
+                                  const station = t.station ?? "";
+                                  const alliance = station.startsWith("Red")
+                                    ? "Kırmızı"
+                                    : station.startsWith("Blue")
+                                      ? "Mavi"
+                                      : "";
+                                  const pos = station.replace(/^(Red|Blue)\s*/i, "");
+                                  return (
+                                    <span key={t.teamNumber}>
+                                      {t.teamNumber}
+                                      {teamNamesByNumber[t.teamNumber] && (
+                                        <span className="ml-0.5">
+                                          ({teamNamesByNumber[t.teamNumber]})
+                                        </span>
+                                      )}
+                                      {alliance && (
+                                        <span className="ml-0.5 text-[#e0e7ff]/60">
+                                          – {alliance} {pos}
+                                        </span>
+                                      )}
+                                      {idx < myTeamsInMatch.length - 1 && ", "}
+                                    </span>
+                                  );
+                                })}
+                              </div>
                             )}
                           </div>
                         </li>
