@@ -33,6 +33,7 @@ model User {
   matchDataPosts   MatchDataPost[]
   createdEvents   Event[]       @relation("EventCreatedBy")
   pushSubscriptions PushSubscription[]
+  videoAnalysisJobs VideoAnalysisJob[]
 }
 
 // Web Push: kullanici + etkinlik bazli; ana ekrana eklenince bildirim icin
@@ -198,4 +199,85 @@ model MatchScout {
   @@unique([matchId, teamId])
   @@index([eventId])
   @@index([teamId])
+}
+
+// ─── Video Analysis ───────────────────────────────────────────────
+
+enum VideoAnalysisStatus {
+  queued
+  downloading
+  analyzing
+  completed
+  failed
+}
+
+model VideoAnalysisJob {
+  id               String               @id @default(cuid())
+  userId           String               @map("user_id")
+  youtubeUrl       String               @map("youtube_url")
+  youtubeVideoId   String               @map("youtube_video_id")
+  title            String?
+  eventName        String?              @map("event_name")
+  matchLabel       String?              @map("match_label")
+  focusTeamNumber  Int?                 @map("focus_team_number")
+  notes            String?              @db.Text
+  status           VideoAnalysisStatus  @default(queued)
+  progress         Int                  @default(0) // 0-100
+  errorMessage     String?              @map("error_message") @db.Text
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  completedAt      DateTime?            @map("completed_at")
+
+  user   User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  result VideoAnalysisResult?
+
+  @@index([userId])
+  @@map("video_analysis_jobs")
+}
+
+model VideoAnalysisResult {
+  id             String   @id @default(cuid())
+  jobId          String   @unique @map("job_id")
+  summaryJson    Json?    @map("summary_json")
+  rawMetricsJson Json?    @map("raw_metrics_json")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  job            VideoAnalysisJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  analyzedTeams  AnalyzedTeam[]
+  analysisEvents AnalysisEvent[]
+
+  @@map("video_analysis_results")
+}
+
+model AnalyzedTeam {
+  id                       String  @id @default(cuid())
+  resultId                 String  @map("result_id")
+  teamNumber               Int     @map("team_number")
+  avgCycleTime             Float?  @map("avg_cycle_time")
+  estimatedScoreAttempts   Int?    @map("estimated_score_attempts")
+  estimatedDefenseTimeSec  Float?  @map("estimated_defense_time_sec")
+  idleTimeSec              Float?  @map("idle_time_sec")
+  movementDistance          Float?  @map("movement_distance")
+  zoneEntriesJson          Json?   @map("zone_entries_json")
+  notesJson                Json?   @map("notes_json")
+
+  result VideoAnalysisResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+
+  @@index([resultId])
+  @@map("analyzed_teams")
+}
+
+model AnalysisEvent {
+  id            String  @id @default(cuid())
+  resultId      String  @map("result_id")
+  timestampSec  Float   @map("timestamp_sec")
+  eventType     String  @map("event_type")
+  teamNumber    Int?    @map("team_number")
+  confidence    Float?
+  metadataJson  Json?   @map("metadata_json")
+
+  result VideoAnalysisResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+
+  @@index([resultId])
+  @@map("analysis_events")
 }
