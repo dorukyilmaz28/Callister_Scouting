@@ -6,10 +6,8 @@ export const maxDuration = 60;
 
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
-function buildScoutSummary(event: {
-  name: string;
-  code: string;
-  eventTeams: { team: { number: number; name: string | null } }[];
+function buildScoutSummary(args: {
+  event: { name: string; code: string; teamCount: number };
   pitScouts: {
     team: { number: number; name: string | null };
     drivetrainType: string;
@@ -35,14 +33,15 @@ function buildScoutSummary(event: {
     scoutComments: string | null;
   }[];
 }): string {
+  const { event, pitScouts, matchScouts } = args;
   const lines: string[] = [
     `# Etkinlik: ${event.name} (${event.code})`,
-    `Toplam takım: ${event.eventTeams.length}`,
+    `Toplam takım: ${event.teamCount}`,
     "",
     "## Pit scout verileri",
   ];
 
-  for (const p of event.pitScouts) {
+  for (const p of pitScouts) {
     lines.push(
       `### Takım ${p.team.number}${p.team.name ? ` – ${p.team.name}` : ""}`,
       `Drivetrain: ${p.drivetrainType}, Robot: ${p.robotType}`,
@@ -56,8 +55,8 @@ function buildScoutSummary(event: {
   }
 
   lines.push("## Maç scout verileri (özet)");
-  const byTeam = new Map<number, typeof event.matchScouts>();
-  for (const m of event.matchScouts) {
+  const byTeam = new Map<number, typeof matchScouts>();
+  for (const m of matchScouts) {
     const n = m.team.number;
     if (!byTeam.has(n)) byTeam.set(n, []);
     byTeam.get(n)!.push(m);
@@ -108,24 +107,36 @@ export async function POST(
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       include: {
-        eventTeams: { include: { team: true } },
-        pitScouts: { include: { team: true } },
-        matchScouts: {
-          include: { team: true, match: true },
-          orderBy: [{ match: { matchNumber: "asc" } }, { match: { matchType: "asc" } }],
-        },
+        eventTeams: { select: { teamId: true } },
       },
     });
     if (!event) return NextResponse.json({ error: "Etkinlik bulunamadı" }, { status: 404 });
 
-    const summary = buildScoutSummary(event);
+    const pitScouts = await prisma.pitScout.findMany({
+      where: { eventId, userId: session.id },
+      include: { team: true },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    const matchScouts = await prisma.matchScout.findMany({
+      where: { eventId, userId: session.id },
+      include: { team: true, match: true },
+      orderBy: [{ match: { matchNumber: "asc" } }, { match: { matchType: "asc" } }],
+    });
+
+    const summary = buildScoutSummary({
+      event: { name: event.name, code: event.code, teamCount: event.eventTeams.length },
+      pitScouts,
+      matchScouts,
+    });
     if (summary.length < 100) {
       return NextResponse.json({
-        analysis: "Henüz yeterli pit veya maç scout verisi yok. Birkaç takım için pit ve maç girişi yaptıktan sonra tekrar deneyin.",
+        analysis:
+          "Bu etkinlikte henüz senin girdiğin yeterli pit veya maç scout verisi yok. Birkaç takım için pit ve maç girişi yaptıktan sonra tekrar deneyin.",
       });
     }
 
-    const prompt = `Sen FRC (FIRST Robotics Competition) scout verilerini analiz eden "Callister AI" asistanısın. Aşağıdaki pit ve maç scout verilerini inceleyip Türkçe, kısa ve öz bir analiz yaz: hangi takımlar öne çıkıyor, güçlü/zayıf yönler, takım taktikleri veya notlar hakkında yorum yap. Sadece verilen verilere dayan. Yanıtını 2–3 paragrafta tamamla, kesinlikle yarıda bırakma.\n\n---\n\n${summary}`;
+    const prompt = `Sen FRC (FIRST Robotics Competition) scout verilerini analiz eden \"Callister AI\" asistanısın.\n\nÖNEMLİ: Aşağıdaki veriler, SADECE giriş yapan kullanıcının kendi pit ve maç scout girişleridir. Başka kullanıcı verisi yoktur ve kullanmayacaksın.\n\nBu verileri inceleyip Türkçe, kısa ve öz bir analiz yaz: hangi takımlar öne çıkıyor, güçlü/zayıf yönler, takım taktikleri veya notlar hakkında yorum yap. Sadece verilen verilere dayan. Yanıtını 2–3 paragrafta tamamla, kesinlikle yarıda bırakma.\n\n---\n\n${summary}`;
 
     const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(key)}`, {
       method: "POST",

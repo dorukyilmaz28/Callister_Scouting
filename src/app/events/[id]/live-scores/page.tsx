@@ -16,6 +16,14 @@ type MatchScoreRow = {
   blueTeleop?: number;
   redEndGame?: number;
   blueEndGame?: number;
+  redEndgame?: number;
+  blueEndgame?: number;
+  redFoul?: number;
+  blueFoul?: number;
+  redFouls?: number;
+  blueFouls?: number;
+  redPenalty?: number;
+  bluePenalty?: number;
   scoreRedFinal?: number;
   scoreBlueFinal?: number;
   /** FRC bazen skoru alliances.red.score / alliances.blue.score olarak döner */
@@ -78,6 +86,40 @@ function getRedBlueScore(m: MatchScoreRow): { red: number | null; blue: number |
   };
 }
 
+function pickNumber(obj: Record<string, unknown>, keys: string[]): number | null {
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+  }
+  return null;
+}
+
+function getAllianceBreakdown(m: MatchScoreRow): {
+  red: { auto: number | null; teleop: number | null; endgame: number | null; foul: number | null; total: number | null };
+  blue: { auto: number | null; teleop: number | null; endgame: number | null; foul: number | null; total: number | null };
+} {
+  const o = m as unknown as Record<string, unknown>;
+  const { red: totalRed, blue: totalBlue } = getRedBlueScore(m);
+
+  const redAuto = pickNumber(o, ["redAuto", "red_auto", "autoRed", "redAutoPoints", "redAutoScore"]);
+  const blueAuto = pickNumber(o, ["blueAuto", "blue_auto", "autoBlue", "blueAutoPoints", "blueAutoScore"]);
+  const redTeleop = pickNumber(o, ["redTeleop", "red_teleop", "teleopRed", "redTeleopPoints", "redTeleopScore"]);
+  const blueTeleop = pickNumber(o, ["blueTeleop", "blue_teleop", "teleopBlue", "blueTeleopPoints", "blueTeleopScore"]);
+  const redEndgame = pickNumber(o, ["redEndGame", "redEndgame", "red_endgame", "endgameRed", "redEndgamePoints", "redEndGamePoints"]);
+  const blueEndgame = pickNumber(o, ["blueEndGame", "blueEndgame", "blue_endgame", "endgameBlue", "blueEndgamePoints", "blueEndGamePoints"]);
+  const redFoul = pickNumber(o, ["redFoul", "redFouls", "redPenalty", "redFoulPoints", "redPenaltyPoints", "foulRed", "penaltyRed"]);
+  const blueFoul = pickNumber(o, ["blueFoul", "blueFouls", "bluePenalty", "blueFoulPoints", "bluePenaltyPoints", "foulBlue", "penaltyBlue"]);
+
+  return {
+    red: { auto: redAuto, teleop: redTeleop, endgame: redEndgame, foul: redFoul, total: totalRed },
+    blue: { auto: blueAuto, teleop: blueTeleop, endgame: blueEndgame, foul: blueFoul, total: totalBlue },
+  };
+}
+
+function fmt(n: number | null): string {
+  return typeof n === "number" ? String(n) : "—";
+}
+
 function normalizeRankings(data: unknown): RankingRow[] {
   if (!data) return [];
   if (Array.isArray(data)) return data as RankingRow[];
@@ -113,6 +155,7 @@ export default function LiveScoresPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [matches, setMatches] = useState<MatchScoreRow[]>([]);
+  const [matchSource, setMatchSource] = useState<"frc" | "tba" | "unknown">("unknown");
   const [schedule, setSchedule] = useState<unknown>(null);
   const [rankings, setRankings] = useState<unknown>(null);
   const [teamNamesByNumber, setTeamNamesByNumber] = useState<Record<number, string>>({});
@@ -183,6 +226,13 @@ export default function LiveScoresPage() {
       .then((data) => {
         if (data && typeof data === "object" && "error" in data && data.error)
           setError(String(data.error));
+        const src =
+          data && typeof data === "object" && (data as { _source?: unknown })._source === "tba"
+            ? "tba"
+            : data
+              ? "frc"
+              : "unknown";
+        setMatchSource(src);
         const list = normalizeMatchScores(data);
         setMatches(list);
         if (list.length === 0) {
@@ -314,6 +364,7 @@ export default function LiveScoresPage() {
                       const myTeamsInMatch = (item.teams ?? []).filter((t) =>
                         assignedTeamNumbers.includes(t.teamNumber)
                       );
+                      const breakdown = m ? getAllianceBreakdown(m) : null;
                       return (
                         <li key={`my-${num}`}>
                           <div className="card p-4 flex flex-col gap-2 border-[#6366f1]/40">
@@ -370,6 +421,35 @@ export default function LiveScoresPage() {
                                 })}
                               </div>
                             )}
+                            <details className="mt-1 rounded-lg bg-white/5 border border-white/10 px-3 py-2">
+                              <summary className="cursor-pointer text-xs text-[#c7d2fe] font-medium select-none">
+                                Detay (Auto / Teleop / Endgame)
+                              </summary>
+                              {matchSource === "tba" ? (
+                                <p className="text-xs text-[#e0e7ff]/60 mt-2">
+                                  Bu maç TBA fallback kaynağından geldiği için breakdown detayları yok.
+                                </p>
+                              ) : (
+                                <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
+                                  <div className="rounded-lg bg-[#1e1e42] border border-[#6366f1]/20 p-2">
+                                    <div className="font-semibold text-red-300 mb-1">Kırmızı</div>
+                                    <div className="flex justify-between"><span>Auto</span><span>{fmt(breakdown?.red.auto ?? null)}</span></div>
+                                    <div className="flex justify-between"><span>Teleop</span><span>{fmt(breakdown?.red.teleop ?? null)}</span></div>
+                                    <div className="flex justify-between"><span>Endgame</span><span>{fmt(breakdown?.red.endgame ?? null)}</span></div>
+                                    <div className="flex justify-between"><span>Penalty/Foul</span><span>{fmt(breakdown?.red.foul ?? null)}</span></div>
+                                    <div className="flex justify-between font-medium pt-1 border-t border-white/10 mt-1"><span>Toplam</span><span>{fmt(breakdown?.red.total ?? null)}</span></div>
+                                  </div>
+                                  <div className="rounded-lg bg-[#1e1e42] border border-[#6366f1]/20 p-2">
+                                    <div className="font-semibold text-blue-300 mb-1">Mavi</div>
+                                    <div className="flex justify-between"><span>Auto</span><span>{fmt(breakdown?.blue.auto ?? null)}</span></div>
+                                    <div className="flex justify-between"><span>Teleop</span><span>{fmt(breakdown?.blue.teleop ?? null)}</span></div>
+                                    <div className="flex justify-between"><span>Endgame</span><span>{fmt(breakdown?.blue.endgame ?? null)}</span></div>
+                                    <div className="flex justify-between"><span>Penalty/Foul</span><span>{fmt(breakdown?.blue.foul ?? null)}</span></div>
+                                    <div className="flex justify-between font-medium pt-1 border-t border-white/10 mt-1"><span>Toplam</span><span>{fmt(breakdown?.blue.total ?? null)}</span></div>
+                                  </div>
+                                </div>
+                              )}
+                            </details>
                           </div>
                         </li>
                       );
@@ -394,9 +474,11 @@ export default function LiveScoresPage() {
                     const isMyMatch = myTeamMatchesWithScores.some(
                       (x) => (x.item.matchNumber ?? 0) === num
                     );
+                    const breakdown = getAllianceBreakdown(m);
                     return (
                       <li key={`${num}-${i}`}>
-                        <div className={`card p-4 flex items-center justify-between gap-3 flex-wrap ${isMyMatch ? "border-[#6366f1] bg-[#6366f1]/10" : ""}`}>
+                        <div className={`card p-4 flex flex-col gap-2 ${isMyMatch ? "border-[#6366f1] bg-[#6366f1]/10" : ""}`}>
+                          <div className="flex items-center justify-between gap-3 flex-wrap">
                           <span className="font-semibold text-[#e0e7ff]">
                             Maç {num}
                             {isMyMatch && <span className="ml-2 text-xs text-[#a5b4fc]">★ Senin maçın</span>}
@@ -419,6 +501,36 @@ export default function LiveScoresPage() {
                               {winner}
                             </span>
                           )}
+                          </div>
+                          <details className="rounded-lg bg-white/5 border border-white/10 px-3 py-2">
+                            <summary className="cursor-pointer text-xs text-[#c7d2fe] font-medium select-none">
+                              Detay (Auto / Teleop / Endgame)
+                            </summary>
+                            {matchSource === "tba" ? (
+                              <p className="text-xs text-[#e0e7ff]/60 mt-2">
+                                Bu maç TBA fallback kaynağından geldiği için breakdown detayları yok.
+                              </p>
+                            ) : (
+                              <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
+                                <div className="rounded-lg bg-[#1e1e42] border border-[#6366f1]/20 p-2">
+                                  <div className="font-semibold text-red-300 mb-1">Kırmızı</div>
+                                  <div className="flex justify-between"><span>Auto</span><span>{fmt(breakdown.red.auto)}</span></div>
+                                  <div className="flex justify-between"><span>Teleop</span><span>{fmt(breakdown.red.teleop)}</span></div>
+                                  <div className="flex justify-between"><span>Endgame</span><span>{fmt(breakdown.red.endgame)}</span></div>
+                                  <div className="flex justify-between"><span>Penalty/Foul</span><span>{fmt(breakdown.red.foul)}</span></div>
+                                  <div className="flex justify-between font-medium pt-1 border-t border-white/10 mt-1"><span>Toplam</span><span>{fmt(breakdown.red.total)}</span></div>
+                                </div>
+                                <div className="rounded-lg bg-[#1e1e42] border border-[#6366f1]/20 p-2">
+                                  <div className="font-semibold text-blue-300 mb-1">Mavi</div>
+                                  <div className="flex justify-between"><span>Auto</span><span>{fmt(breakdown.blue.auto)}</span></div>
+                                  <div className="flex justify-between"><span>Teleop</span><span>{fmt(breakdown.blue.teleop)}</span></div>
+                                  <div className="flex justify-between"><span>Endgame</span><span>{fmt(breakdown.blue.endgame)}</span></div>
+                                  <div className="flex justify-between"><span>Penalty/Foul</span><span>{fmt(breakdown.blue.foul)}</span></div>
+                                  <div className="flex justify-between font-medium pt-1 border-t border-white/10 mt-1"><span>Toplam</span><span>{fmt(breakdown.blue.total)}</span></div>
+                                </div>
+                              </div>
+                            )}
+                          </details>
                         </div>
                       </li>
                     );
