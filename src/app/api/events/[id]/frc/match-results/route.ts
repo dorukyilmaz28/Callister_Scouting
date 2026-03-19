@@ -7,12 +7,35 @@ import {
   buildFrcUrl,
 } from "@/lib/frc-api";
 
+const TBA_BASE = "https://www.thebluealliance.com/api/v3";
+
 function hasMatchScores(data: unknown): boolean {
   if (!data || typeof data !== "object") return false;
   const o = data as Record<string, unknown>;
   const arr =
     o.MatchScores ?? o.matchScores ?? o.matches ?? o.Matches ?? o.MatchResults ?? o.matchResults;
   return Array.isArray(arr) && arr.length > 0;
+}
+
+function tbaMatchesToScores(tbaMatches: unknown): {
+  MatchScores: Array<{ matchNumber: number; matchType: string; redScore?: number; blueScore?: number }>;
+} {
+  if (!Array.isArray(tbaMatches)) return { MatchScores: [] };
+  const list = tbaMatches
+    .filter((m): m is Record<string, unknown> => m != null && typeof m === "object")
+    .map((m) => {
+      const alliances = m.alliances as { red?: { score?: number }; blue?: { score?: number } } | undefined;
+      const compLevel = (m.comp_level as string) ?? "qm";
+      const matchType = compLevel === "qm" ? "qual" : compLevel;
+      return {
+        matchNumber: typeof m.match_number === "number" ? m.match_number : 0,
+        matchType,
+        redScore: alliances?.red?.score,
+        blueScore: alliances?.blue?.score,
+      };
+    })
+    .filter((m) => m.matchNumber > 0);
+  return { MatchScores: list };
 }
 
 export async function GET(
@@ -34,15 +57,7 @@ export async function GET(
 
     let data: unknown = null;
     const auth = getFrcAuthHeader();
-    if (!auth) {
-      return NextResponse.json({
-        error:
-          "FRC Events API anahtarı bulunamadı. Lütfen FRC_EVENTS_API_USER ve FRC_EVENTS_API_KEY ayarlayın.",
-        MatchScores: [],
-      });
-    }
-
-    {
+    if (auth) {
       const codeOrKey = event.tbaEventKey ?? event.code;
       const parsed = getSeasonAndEventCode(codeOrKey);
       if (parsed) {
@@ -74,11 +89,43 @@ export async function GET(
 
     if (hasMatchScores(data)) return NextResponse.json({ ...(data as object), _source: "frc" });
 
+    const tbaKey = process.env.TBA_API_KEY;
+    const rawCode = event.code ? String(event.code).trim() : "";
+    const eventKey = event.tbaEventKey
+      ?? (rawCode
+        ? /^\d{4}/.test(rawCode)
+          ? rawCode
+          : `${new Date().getFullYear()}${rawCode}`
+        : null);
+    if (tbaKey && eventKey) {
+      try {
+        const tbaRes = await fetch(
+          `${TBA_BASE}/event/${encodeURIComponent(eventKey)}/matches`,
+          { headers: { "X-TBA-Auth-Key": tbaKey }, next: { revalidate: 120 } }
+        );
+        if (tbaRes.ok) {
+          const tbaData = await tbaRes.json();
+          const scores = tbaMatchesToScores(tbaData);
+          if (scores.MatchScores.length > 0) {
+            return NextResponse.json({
+              ...scores,
+              _source: "tba",
+              warning: "FRC kaynağında skor bulunamadı, TBA fallback kullanıldı.",
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("[frc/match-results] TBA fallback failed", e);
+      }
+    }
+
     if (data && typeof data === "object" && "error" in (data as object))
       return NextResponse.json(data);
 
     return NextResponse.json({
-      error: "FRC Events API'de bu etkinlik için henüz maç sonucu veya skor breakdown verisi bulunamadı.",
+      error: auth
+        ? "FRC Events API'de bu etkinlik için henüz maç sonucu veya skor breakdown verisi bulunamadı."
+        : "FRC Events API anahtarı bulunamadı. TBA fallback de skor döndürmedi.",
       MatchScores: [],
     });
   } catch (e) {

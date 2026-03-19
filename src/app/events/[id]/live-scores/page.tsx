@@ -226,6 +226,8 @@ export default function LiveScoresPage() {
       .then((data) => {
         if (data && typeof data === "object" && "error" in data && data.error)
           setError(String(data.error));
+        if (data && typeof data === "object" && "warning" in data && data.warning)
+          setError(String(data.warning));
         const src =
           data && typeof data === "object" && (data as { _source?: unknown })._source === "tba"
             ? "tba"
@@ -290,6 +292,13 @@ export default function LiveScoresPage() {
       <p className="text-sm text-[#e0e7ff]/70 mb-4">
         FRC Events API (FMS) üzerinden resmi maç sonuçları. Tamamlanan tüm maçlar listelenir (sadece canlı yayın değil). Etkinlik henüz başlamadıysa veya FMS senkron yapmadıysa veri görünmeyebilir.
       </p>
+      {matches.length > 0 && (
+        <div className="mb-3">
+          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${matchSource === "frc" ? "bg-green-500/20 text-green-300" : matchSource === "tba" ? "bg-amber-500/20 text-amber-300" : "bg-white/10 text-[#e0e7ff]/70"}`}>
+            Kaynak: {matchSource === "frc" ? "FRC Events API" : matchSource === "tba" ? "TBA fallback" : "Bilinmiyor"}
+          </span>
+        </div>
+      )}
 
       <div className="mb-5">
         <MatchNotificationSubscribe
