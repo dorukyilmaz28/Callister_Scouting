@@ -6,6 +6,39 @@ import Link from "next/link";
 
 type Team = { id: string; number: number; name: string | null };
 type Assignment = { teamId: string };
+type MetricKey = "autoAvg" | "teleopAvg" | "climbRate" | "driverAvg";
+type CompareRow = {
+  teamId: string;
+  teamNumber: number;
+  teamName: string | null;
+  matchCount: number;
+  autoAvg: number;
+  teleopAvg: number;
+  climbRate: number;
+  driverAvg: number | null;
+};
+type MemberStat = {
+  userId: string;
+  userName: string;
+  teamNumber: number | null;
+  pitCount: number;
+  matchCount: number;
+  assignedTeams: { teamId: string; teamNumber: number; teamName: string | null }[];
+  recentMatchScouts: {
+    teamNumber: number;
+    matchNumber: number;
+    matchType: string;
+    autoScoreCount: number;
+    gamePieceCount: number;
+    climbSuccess: boolean;
+  }[];
+  recentPitScouts: {
+    teamNumber: number;
+    drivetrainType: string;
+    robotType: string;
+    climbCapability: string | null;
+  }[];
+};
 
 function mdToHtml(md: string): string {
   return md
@@ -22,28 +55,35 @@ export default function TeamsListPage() {
   const eventId = params.id as string;
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isScout, setIsScout] = useState(false);
+  const [userRole, setUserRole] = useState<"admin" | "strategy" | "scout" | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiFullText, setAiFullText] = useState<string | null>(null);
   const [aiDisplayed, setAiDisplayed] = useState("");
   const [aiError, setAiError] = useState<string | null>(null);
   const [thinkDots, setThinkDots] = useState("");
+  const [compareRows, setCompareRows] = useState<CompareRow[]>([]);
+  const [metric, setMetric] = useState<MetricKey>("teleopAvg");
+  const [memberStats, setMemberStats] = useState<MemberStat[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     Promise.all([
       fetch(`/api/events/${eventId}/teams`).then((r) => (r.ok ? r.json() : [])),
       fetch(`/api/events/${eventId}/assignments`).then((r) => (r.ok ? r.json() : [])),
-      fetch("/api/auth/me").then((r) => r.json().then((d) => d.user?.role === "scout")),
-    ]).then(([allTeams, assignments, scout]) => {
-      setIsScout(!!scout);
+      fetch("/api/auth/me").then((r) => r.json().then((d) => d.user?.role ?? null)),
+      fetch(`/api/events/${eventId}/teams/compare`).then((r) => (r.ok ? r.json() : { teams: [] })),
+      fetch(`/api/events/${eventId}/member-stats`).then((r) => (r.ok ? r.json() : { members: [] })),
+    ]).then(([allTeams, assignments, role, compareData, memberData]) => {
+      setUserRole(role);
       const assignmentTeamIds = (assignments as Assignment[]).map((a) => a.teamId);
       const mine = assignmentTeamIds.length > 0
         ? (allTeams as Team[]).filter((t) => assignmentTeamIds.includes(t.id))
-        : scout
+        : role === "scout"
           ? []
           : (allTeams as Team[]);
       setTeams(mine);
+      setCompareRows((compareData?.teams ?? []) as CompareRow[]);
+      setMemberStats((memberData?.members ?? []) as MemberStat[]);
       setLoading(false);
     });
   }, [eventId]);
@@ -100,6 +140,19 @@ export default function TeamsListPage() {
     );
   }
 
+  const metricLabel: Record<MetricKey, string> = {
+    autoAvg: "Auto Ortalaması",
+    teleopAvg: "Teleop Ortalaması",
+    climbRate: "Climb Başarı (%)",
+    driverAvg: "Sürücü Skoru",
+  };
+  const maxValue = Math.max(
+    1,
+    ...compareRows.map((r) =>
+      metric === "driverAvg" ? (r.driverAvg ?? 0) : (r[metric] as number)
+    )
+  );
+
   return (
     <div className="app-shell pt-4">
       <h1 className="text-xl font-bold text-[#f0f0f0] mb-4">Takımlar · Verilere bak</h1>
@@ -143,16 +196,123 @@ export default function TeamsListPage() {
         </div>
       )}
 
+      <div className="card p-4 mb-5">
+        <h2 className="text-sm font-semibold text-[#c7d2fe] mb-3">
+          Takım Karşılaştırma Grafiği
+        </h2>
+        <div className="flex gap-2 mb-3 flex-wrap">
+          {(Object.keys(metricLabel) as MetricKey[]).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setMetric(k)}
+              className={`px-3 py-2 text-xs rounded-lg ${
+                metric === k
+                  ? "bg-[#6366f1] text-white"
+                  : "bg-white/10 text-[#e0e7ff] hover:bg-white/15"
+              }`}
+            >
+              {metricLabel[k]}
+            </button>
+          ))}
+        </div>
+        {compareRows.length === 0 ? (
+          <p className="text-sm text-[#e0e7ff]/70">Grafik için yeterli scout verisi yok.</p>
+        ) : (
+          <div className="space-y-2">
+            {compareRows.map((row) => {
+              const value =
+                metric === "driverAvg" ? (row.driverAvg ?? 0) : (row[metric] as number);
+              const width = Math.max(2, Math.round((value / maxValue) * 100));
+              return (
+                <div key={row.teamId} className="text-xs">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[#e0e7ff] font-medium">
+                      {row.teamNumber}
+                      {row.teamName ? ` · ${row.teamName}` : ""}
+                    </span>
+                    <span className="text-[#c7d2fe]">{value.toFixed(2)}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-2 bg-gradient-to-r from-[#6366f1] to-[#a5b4fc]"
+                      style={{ width: `${width}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {(userRole === "admin" || userRole === "strategy") && (
+        <div className="card p-4 mb-5">
+          <h2 className="text-sm font-semibold text-[#c7d2fe] mb-2">
+            Üye Scout Performansı (Admin)
+          </h2>
+          {memberStats.length === 0 ? (
+            <p className="text-sm text-[#e0e7ff]/70">Henüz üye scout verisi yok.</p>
+          ) : (
+            <ul className="space-y-3">
+              {memberStats.map((m) => (
+                <li key={m.userId} className="rounded-lg border border-white/10 bg-white/5 p-3">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="font-medium text-[#e0e7ff]">
+                      {m.userName}
+                      {m.teamNumber ? ` (Takım ${m.teamNumber})` : ""}
+                    </span>
+                    <span className="text-xs text-[#c7d2fe]">
+                      Pit: {m.pitCount} · Match: {m.matchCount}
+                    </span>
+                  </div>
+                  <div className="text-xs text-[#e0e7ff]/80 mt-1">
+                    Atanan takımlar:{" "}
+                    {m.assignedTeams.length > 0
+                      ? m.assignedTeams.map((x) => x.teamNumber).join(", ")
+                      : "—"}
+                  </div>
+                  {m.recentMatchScouts.length > 0 && (
+                    <div className="text-xs text-[#e0e7ff]/70 mt-1">
+                      Son match girişleri:{" "}
+                      {m.recentMatchScouts
+                        .map(
+                          (x) =>
+                            `${x.matchType} ${x.matchNumber} (T${x.teamNumber}: A${x.autoScoreCount}/Te${x.gamePieceCount}/${x.climbSuccess ? "Climb✓" : "Climb—"})`
+                        )
+                        .join(" · ")}
+                    </div>
+                  )}
+                  {m.recentPitScouts.length > 0 && (
+                    <div className="text-xs text-[#e0e7ff]/70 mt-1">
+                      Son pit girişleri:{" "}
+                      {m.recentPitScouts
+                        .map(
+                          (x) =>
+                            `T${x.teamNumber} (${x.drivetrainType}, ${x.robotType}, climb ${
+                              x.climbCapability ?? "—"
+                            })`
+                        )
+                        .join(" · ")}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {teams.length === 0 ? (
         <div className="card p-5">
-          {isScout ? (
+          {userRole === "scout" ? (
             <p className="text-[#e0e7ff]/90">
               Scout yapacağınız takımlar henüz seçilmedi. Ana sayfadan &quot;Scout yapacağım takımları seç&quot; ile takımlarınızı seçin; burada sadece onların verilerini görebilirsiniz.
             </p>
           ) : (
             <p className="text-[#e0e7ff]/80">Bu etkinlikte takım yok.</p>
           )}
-          {isScout && (
+          {userRole === "scout" && (
             <Link href={`/events/${eventId}`} className="text-[#3b82f6] mt-2 inline-block">← Ana sayfa</Link>
           )}
         </div>
