@@ -38,7 +38,8 @@ export async function GET(
         { status: 400 }
       );
 
-    const url = `${buildFrcUrl(parsed.season, parsed.eventCode, "schedule")}?tournamentLevel=qual`;
+    // Qual + playoff hepsi gelsin (kullanıcı seçili takımlarının tüm maçlarını görsün)
+    const url = `${buildFrcUrl(parsed.season, parsed.eventCode, "schedule")}`;
     const res = await fetch(url, {
       headers: { Authorization: auth, Accept: "application/json" },
       next: { revalidate: 60 },
