@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET ?? "dev-secret-change-in-production"
 );
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL ?? "").trim().toLowerCase();
 const COOKIE_NAME = "scout_session";
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -75,21 +76,30 @@ export async function destroySession(): Promise<void> {
 
 export async function login(emailOrName: string, password: string): Promise<SessionUser | null> {
   const key = emailOrName.trim();
+  const keyLower = key.toLowerCase();
   const user = await prisma.user.findFirst({
     where: {
-      OR: [{ email: key }, { name: key }],
+      OR: [{ email: keyLower }, { name: key }],
     },
   });
   if (!user) return null;
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) return null;
+
+  // Tek admin hesabını env üzerinden belirleme: ADMIN_EMAIL
+  // Bu e-posta ile giriş yapan hesap otomatik admin olur.
+  const shouldBeAdmin = !!ADMIN_EMAIL && (user.email ?? "").toLowerCase() === ADMIN_EMAIL;
+  if (shouldBeAdmin && user.role !== "admin") {
+    await prisma.user.update({ where: { id: user.id }, data: { role: "admin" } });
+  }
+
   const sessionUser: SessionUser = {
     id: user.id,
     name: user.name,
     email: user.email,
     fullName: user.fullName,
     teamNumber: user.teamNumber,
-    role: user.role as Role,
+    role: (shouldBeAdmin ? "admin" : user.role) as Role,
   };
   await createSession(sessionUser);
   return sessionUser;

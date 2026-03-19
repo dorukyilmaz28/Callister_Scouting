@@ -24,6 +24,8 @@ export async function POST(request: Request) {
     if (existing) {
       return NextResponse.json({ error: "Bu e-posta adresi zaten kayıtlı" }, { status: 400 });
     }
+    const adminEmail = (process.env.ADMIN_EMAIL ?? "").trim().toLowerCase();
+    const role = adminEmail && em === adminEmail ? "admin" : "scout";
     const passwordHash = await hashPassword(String(password));
     const fullNameStr = String(fullName).trim();
     const user = await prisma.user.create({
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
         teamNumber: tn,
         name: em,
         passwordHash,
-        role: "scout",
+        role,
       },
     });
     return NextResponse.json({

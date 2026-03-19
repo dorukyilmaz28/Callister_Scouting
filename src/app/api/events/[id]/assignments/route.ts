@@ -32,8 +32,9 @@ export async function GET(
 }
 
 export async function POST(request: Request) {
+  let session;
   try {
-    await requireRole("admin");
+    session = await requireRole("admin");
   } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -57,6 +58,31 @@ export async function POST(request: Request) {
       include: { eventTeams: true },
     });
     if (!event) return NextResponse.json({ error: "Event not found" }, { status: 404 });
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, teamNumber: true, role: true },
+    });
+    if (!targetUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    // Admin sadece kendi takımındaki üyeleri yönetebilir.
+    if (
+      session.teamNumber != null &&
+      targetUser.teamNumber !== session.teamNumber
+    ) {
+      return NextResponse.json(
+        { error: "Sadece kendi takımındaki kullanıcıları atayabilirsiniz." },
+        { status: 403 }
+      );
+    }
+
+    if (targetUser.role !== "scout") {
+      return NextResponse.json(
+        { error: "Atama sadece scout rolündeki kullanıcıya yapılabilir." },
+        { status: 400 }
+      );
+    }
+
     const validTeamIds = event.eventTeams
       .filter((et) => teamIds.includes(et.teamId))
       .map((et) => et.teamId);
