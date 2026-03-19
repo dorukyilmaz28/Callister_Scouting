@@ -39,41 +39,58 @@ export async function GET(
       );
 
     // Qual + playoff hepsi gelsin (kullanıcı seçili takımlarının tüm maçlarını görsün)
-    const url = `${buildFrcUrl(parsed.season, parsed.eventCode, "schedule")}`;
-    const res = await fetch(url, {
-      headers: { Authorization: auth, Accept: "application/json" },
-      next: { revalidate: 60 },
-    });
+    const scheduleUrl = (tournamentLevel: string) =>
+      `${buildFrcUrl(parsed.season, parsed.eventCode, "schedule")}?tournamentLevel=${encodeURIComponent(
+        tournamentLevel
+      )}`;
 
-    if (res.status === 304)
-      return new NextResponse(null, { status: 304 });
-    if (res.status === 404)
-      return NextResponse.json(
-        { error: "Bu etkinlik için henüz program yok (etkinlik aktif değil veya FMS’te kayıt yok).",
-        schedule: null,
-      });
-    if (!res.ok) {
-      const text = await res.text();
-      console.warn("[frc/schedule] FRC API", res.status, text.slice(0, 150));
-      return NextResponse.json({
-        error: res.status === 401
-          ? "FRC API yetkisi yok (kullanıcı/şifre kontrol edin)."
-          : `FRC API yanıt vermedi (${res.status}). Etkinlik henüz açılmamış olabilir.`,
-        schedule: null,
-      });
-    }
+    // Qual + playoff hepsi için iki ayrı çağrı yapıyoruz (FRC API tek seferde “all” kabul etmeyebiliyor).
+    const fetchLevel = async (tournamentLevel: string): Promise<unknown | null> => {
+      try {
+        const res = await fetch(scheduleUrl(tournamentLevel), {
+          headers: { Authorization: auth, Accept: "application/json" },
+          next: { revalidate: 60 },
+        });
 
-    const text = await res.text();
-    let data: unknown;
-    try {
-      data = text ? JSON.parse(text) : {};
-    } catch {
-      return NextResponse.json({
-        error: "FRC API geçersiz yanıt; program şu an gösterilemiyor.",
-        schedule: null,
-      });
-    }
-    return NextResponse.json(data);
+        if (res.status === 304) return null;
+        if (res.status === 404) return null;
+        if (!res.ok) {
+          const text = await res.text();
+          console.warn("[frc/schedule] FRC API", tournamentLevel, res.status, text.slice(0, 150));
+          return null;
+        }
+
+        const text = await res.text();
+        if (!text) return null;
+        return JSON.parse(text);
+      } catch (e) {
+        console.warn("[frc/schedule] fetchLevel failed", tournamentLevel, e);
+        return null;
+      }
+    };
+
+    const [qualData, playoffData] = await Promise.all([
+      fetchLevel("qual"),
+      fetchLevel("playoff"),
+    ]);
+
+    const qualSchedule =
+      qualData && typeof qualData === "object"
+        ? (qualData as { Schedule?: unknown; schedule?: unknown }).Schedule ??
+          (qualData as { Schedule?: unknown; schedule?: unknown }).schedule
+        : null;
+    const playoffSchedule =
+      playoffData && typeof playoffData === "object"
+        ? (playoffData as { Schedule?: unknown; schedule?: unknown }).Schedule ??
+          (playoffData as { Schedule?: unknown; schedule?: unknown }).schedule
+        : null;
+
+    const merged = ([] as unknown[]).concat(
+      Array.isArray(qualSchedule) ? qualSchedule : [],
+      Array.isArray(playoffSchedule) ? playoffSchedule : []
+    );
+
+    return NextResponse.json({ Schedule: merged });
   } catch (e) {
     console.error("[frc/schedule]", e);
     return NextResponse.json({

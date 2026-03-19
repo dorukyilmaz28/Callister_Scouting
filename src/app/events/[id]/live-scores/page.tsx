@@ -470,9 +470,7 @@ export default function LiveScoresPage() {
 
       {activeTab === "schedule" && (
         <div className="card p-4">
-          {schedule != null && (schedule as { error?: string }).error ? (
-            <p className="text-amber-400/90 text-sm">{(schedule as { error: string }).error}</p>
-          ) : scheduleItems.length === 0 ? (
+          {scheduleItems.length === 0 ? (
             <p className="text-[#e0e7ff]/60 text-sm">Program henüz yok veya yüklenemedi.</p>
           ) : (
             <ul className="space-y-3">
