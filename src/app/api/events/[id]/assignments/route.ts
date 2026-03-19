@@ -32,9 +32,8 @@ export async function GET(
 }
 
 export async function POST(request: Request) {
-  let session;
   try {
-    session = await requireRole("admin");
+    await requireRole("admin");
   } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -64,17 +63,6 @@ export async function POST(request: Request) {
       select: { id: true, teamNumber: true, role: true },
     });
     if (!targetUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-    // Admin sadece kendi takımındaki üyeleri yönetebilir.
-    if (
-      session.teamNumber != null &&
-      targetUser.teamNumber !== session.teamNumber
-    ) {
-      return NextResponse.json(
-        { error: "Sadece kendi takımındaki kullanıcıları atayabilirsiniz." },
-        { status: 403 }
-      );
-    }
 
     if (targetUser.role !== "scout") {
       return NextResponse.json(

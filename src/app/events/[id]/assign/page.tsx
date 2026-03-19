@@ -21,16 +21,23 @@ export default function AssignPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/users").then((r) => (r.ok ? r.json() : [])),
-      fetch(`/api/events/${eventId}/teams`).then((r) => (r.ok ? r.json() : [])),
-      fetch(`/api/events/${eventId}/assignments`).then((r) => (r.ok ? r.json() : [])),
-    ]).then(([u, t, a]) => {
-      setUsers(u.filter((x: User) => x.role === "scout"));
-      setTeams(t);
-      setAssignments(a);
-      setLoading(false);
-    });
+    (async () => {
+      try {
+        // Takım listesi TBA'dan gelsin: önce eventTeam senkronunu tetikle.
+        await fetch(`/api/events/${eventId}/sync-teams-from-tba`, { method: "POST" });
+
+        const [u, t, a] = await Promise.all([
+          fetch("/api/users").then((r) => (r.ok ? r.json() : [])),
+          fetch(`/api/events/${eventId}/teams`).then((r) => (r.ok ? r.json() : [])),
+          fetch(`/api/events/${eventId}/assignments`).then((r) => (r.ok ? r.json() : [])),
+        ]);
+        setUsers(u.filter((x: User) => x.role === "scout"));
+        setTeams(t);
+        setAssignments(a);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [eventId]);
 
   useEffect(() => {
@@ -118,6 +125,15 @@ export default function AssignPage() {
 
       {selectedUser && (
         <div className="card p-4">
+          <div className="mb-3 text-sm text-gray-600">
+            Seçili scout&apos;un mevcut takımları:{" "}
+            {selectedTeams.length > 0
+              ? assignments
+                  .filter((a) => a.userId === selectedUser)
+                  .map((a) => a.team.number)
+                  .join(", ")
+              : "Henüz atama yok"}
+          </div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Takımlar (tam 2 seçin)
           </label>
