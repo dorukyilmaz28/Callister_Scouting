@@ -120,6 +120,15 @@ function fmt(n: number | null): string {
   return typeof n === "number" ? String(n) : "—";
 }
 
+function getMatchLabel(item: ScheduleItem, fallbackNum: number): string {
+  const level = (item.tournamentLevel ?? "").toLowerCase();
+  const num = item.matchNumber ?? fallbackNum;
+  if (item.description) return item.description;
+  if (level.includes("playoff")) return `Playoff Maç ${num}`;
+  if (level.includes("qual")) return `Qual Maç ${num}`;
+  return `Maç ${num}`;
+}
+
 function normalizeRankings(data: unknown): RankingRow[] {
   if (!data) return [];
   if (Array.isArray(data)) return data as RankingRow[];
@@ -155,7 +164,6 @@ export default function LiveScoresPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [matches, setMatches] = useState<MatchScoreRow[]>([]);
-  const [matchSource, setMatchSource] = useState<"frc" | "tba" | "unknown">("unknown");
   const [schedule, setSchedule] = useState<unknown>(null);
   const [rankings, setRankings] = useState<unknown>(null);
   const [teamNamesByNumber, setTeamNamesByNumber] = useState<Record<number, string>>({});
@@ -226,15 +234,6 @@ export default function LiveScoresPage() {
       .then((data) => {
         if (data && typeof data === "object" && "error" in data && data.error)
           setError(String(data.error));
-        if (data && typeof data === "object" && "warning" in data && data.warning)
-          setError(String(data.warning));
-        const src =
-          data && typeof data === "object" && (data as { _source?: unknown })._source === "tba"
-            ? "tba"
-            : data
-              ? "frc"
-              : "unknown";
-        setMatchSource(src);
         const list = normalizeMatchScores(data);
         setMatches(list);
         if (list.length === 0) {
@@ -292,14 +291,6 @@ export default function LiveScoresPage() {
       <p className="text-sm text-[#e0e7ff]/70 mb-4">
         FRC Events API (FMS) üzerinden resmi maç sonuçları. Tamamlanan tüm maçlar listelenir (sadece canlı yayın değil). Etkinlik henüz başlamadıysa veya FMS senkron yapmadıysa veri görünmeyebilir.
       </p>
-      {matches.length > 0 && (
-        <div className="mb-3">
-          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${matchSource === "frc" ? "bg-green-500/20 text-green-300" : matchSource === "tba" ? "bg-amber-500/20 text-amber-300" : "bg-white/10 text-[#e0e7ff]/70"}`}>
-            Kaynak: {matchSource === "frc" ? "FRC Events API" : matchSource === "tba" ? "TBA fallback" : "Bilinmiyor"}
-          </span>
-        </div>
-      )}
-
       <div className="mb-5">
         <MatchNotificationSubscribe
           eventId={eventId}
@@ -351,34 +342,37 @@ export default function LiveScoresPage() {
             </div>
           ) : matches.length > 0 ? (
             <div className="space-y-4">
-              {myTeamMatchesWithScores.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-[#c7d2fe] mb-2">
-                    Takımınızın oynadığı maçlar
-                  </h3>
+              <div>
+                <h3 className="text-sm font-semibold text-[#c7d2fe] mb-2">
+                  Seçtiğin takımların maçları
+                </h3>
+                {myTeamMatchesWithScores.length === 0 ? (
+                  <div className="card p-4">
+                    <p className="text-sm text-[#e0e7ff]/75">
+                      Seçtiğin takımlar için bu etkinlikte eşleşen maç bulunamadı.
+                    </p>
+                  </div>
+                ) : (
                   <ul className="space-y-2">
-                    {myTeamMatchesWithScores.map(({ item, score: m }) => {
+                    {myTeamMatchesWithScores.map(({ item, score: m }, i) => {
                       const num = m?.matchNumber ?? item.matchNumber ?? 0;
                       const { red, blue } = m ? getRedBlueScore(m) : { red: null, blue: null };
                       const redDisplay = red ?? m?.redAuto ?? "—";
                       const blueDisplay = blue ?? m?.blueAuto ?? "—";
                       const winner =
                         red != null && blue != null
-                          ? red > blue
-                            ? "Kırmızı"
-                            : blue > red
-                              ? "Mavi"
-                              : "Berabere"
+                          ? red > blue ? "Kırmızı" : blue > red ? "Mavi" : "Berabere"
                           : null;
                       const myTeamsInMatch = (item.teams ?? []).filter((t) =>
                         assignedTeamNumbers.includes(t.teamNumber)
                       );
-                      const breakdown = m ? getAllianceBreakdown(m) : null;
                       return (
-                        <li key={`my-${num}`}>
+                        <li key={`${num}-${item.description ?? ""}-${i}`}>
                           <div className="card p-4 flex flex-col gap-2 border-[#6366f1]/40">
                             <div className="flex items-center justify-between gap-3 flex-wrap">
-                              <span className="font-semibold text-[#e0e7ff]">Maç {num}</span>
+                              <span className="font-semibold text-[#e0e7ff]">
+                                {getMatchLabel(item, num)}
+                              </span>
                               <div className="flex items-center gap-4">
                                 <span className="text-red-400 font-medium">{redDisplay}</span>
                                 <span className="text-[#e0e7ff]/50">–</span>
@@ -430,121 +424,12 @@ export default function LiveScoresPage() {
                                 })}
                               </div>
                             )}
-                            <details className="mt-1 rounded-lg bg-white/5 border border-white/10 px-3 py-2">
-                              <summary className="cursor-pointer text-xs text-[#c7d2fe] font-medium select-none">
-                                Detay (Auto / Teleop / Endgame)
-                              </summary>
-                              {matchSource === "tba" ? (
-                                <p className="text-xs text-[#e0e7ff]/60 mt-2">
-                                  Bu maç TBA fallback kaynağından geldiği için breakdown detayları yok.
-                                </p>
-                              ) : (
-                                <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
-                                  <div className="rounded-lg bg-[#1e1e42] border border-[#6366f1]/20 p-2">
-                                    <div className="font-semibold text-red-300 mb-1">Kırmızı</div>
-                                    <div className="flex justify-between"><span>Auto</span><span>{fmt(breakdown?.red.auto ?? null)}</span></div>
-                                    <div className="flex justify-between"><span>Teleop</span><span>{fmt(breakdown?.red.teleop ?? null)}</span></div>
-                                    <div className="flex justify-between"><span>Endgame</span><span>{fmt(breakdown?.red.endgame ?? null)}</span></div>
-                                    <div className="flex justify-between"><span>Penalty/Foul</span><span>{fmt(breakdown?.red.foul ?? null)}</span></div>
-                                    <div className="flex justify-between font-medium pt-1 border-t border-white/10 mt-1"><span>Toplam</span><span>{fmt(breakdown?.red.total ?? null)}</span></div>
-                                  </div>
-                                  <div className="rounded-lg bg-[#1e1e42] border border-[#6366f1]/20 p-2">
-                                    <div className="font-semibold text-blue-300 mb-1">Mavi</div>
-                                    <div className="flex justify-between"><span>Auto</span><span>{fmt(breakdown?.blue.auto ?? null)}</span></div>
-                                    <div className="flex justify-between"><span>Teleop</span><span>{fmt(breakdown?.blue.teleop ?? null)}</span></div>
-                                    <div className="flex justify-between"><span>Endgame</span><span>{fmt(breakdown?.blue.endgame ?? null)}</span></div>
-                                    <div className="flex justify-between"><span>Penalty/Foul</span><span>{fmt(breakdown?.blue.foul ?? null)}</span></div>
-                                    <div className="flex justify-between font-medium pt-1 border-t border-white/10 mt-1"><span>Toplam</span><span>{fmt(breakdown?.blue.total ?? null)}</span></div>
-                                  </div>
-                                </div>
-                              )}
-                            </details>
                           </div>
                         </li>
                       );
                     })}
                   </ul>
-                </div>
-              )}
-              <div>
-                {myTeamMatchesWithScores.length > 0 && (
-                  <h3 className="text-sm font-semibold text-[#e0e7ff]/80 mb-2">Tüm maçlar</h3>
                 )}
-                <ul className="space-y-2">
-                  {matches.map((m, i) => {
-                    const num = m.matchNumber ?? (m["match number"] as number | undefined) ?? i + 1;
-                    const { red, blue } = getRedBlueScore(m);
-                    const redDisplay = red ?? m.redAuto ?? "—";
-                    const blueDisplay = blue ?? m.blueAuto ?? "—";
-                    const winner =
-                      red != null && blue != null
-                        ? red > blue ? "Kırmızı" : blue > red ? "Mavi" : "Berabere"
-                        : null;
-                    const isMyMatch = myTeamMatchesWithScores.some(
-                      (x) => (x.item.matchNumber ?? 0) === num
-                    );
-                    const breakdown = getAllianceBreakdown(m);
-                    return (
-                      <li key={`${num}-${i}`}>
-                        <div className={`card p-4 flex flex-col gap-2 ${isMyMatch ? "border-[#6366f1] bg-[#6366f1]/10" : ""}`}>
-                          <div className="flex items-center justify-between gap-3 flex-wrap">
-                          <span className="font-semibold text-[#e0e7ff]">
-                            Maç {num}
-                            {isMyMatch && <span className="ml-2 text-xs text-[#a5b4fc]">★ Senin maçın</span>}
-                          </span>
-                          <div className="flex items-center gap-4">
-                            <span className="text-red-400 font-medium">{redDisplay}</span>
-                            <span className="text-[#e0e7ff]/50">–</span>
-                            <span className="text-blue-400 font-medium">{blueDisplay}</span>
-                          </div>
-                          {winner && (
-                            <span
-                              className={`text-xs font-medium ${
-                                winner === "Kırmızı"
-                                  ? "text-red-400"
-                                  : winner === "Mavi"
-                                    ? "text-blue-400"
-                                    : "text-[#e0e7ff]/70"
-                              }`}
-                            >
-                              {winner}
-                            </span>
-                          )}
-                          </div>
-                          <details className="rounded-lg bg-white/5 border border-white/10 px-3 py-2">
-                            <summary className="cursor-pointer text-xs text-[#c7d2fe] font-medium select-none">
-                              Detay (Auto / Teleop / Endgame)
-                            </summary>
-                            {matchSource === "tba" ? (
-                              <p className="text-xs text-[#e0e7ff]/60 mt-2">
-                                Bu maç TBA fallback kaynağından geldiği için breakdown detayları yok.
-                              </p>
-                            ) : (
-                              <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
-                                <div className="rounded-lg bg-[#1e1e42] border border-[#6366f1]/20 p-2">
-                                  <div className="font-semibold text-red-300 mb-1">Kırmızı</div>
-                                  <div className="flex justify-between"><span>Auto</span><span>{fmt(breakdown.red.auto)}</span></div>
-                                  <div className="flex justify-between"><span>Teleop</span><span>{fmt(breakdown.red.teleop)}</span></div>
-                                  <div className="flex justify-between"><span>Endgame</span><span>{fmt(breakdown.red.endgame)}</span></div>
-                                  <div className="flex justify-between"><span>Penalty/Foul</span><span>{fmt(breakdown.red.foul)}</span></div>
-                                  <div className="flex justify-between font-medium pt-1 border-t border-white/10 mt-1"><span>Toplam</span><span>{fmt(breakdown.red.total)}</span></div>
-                                </div>
-                                <div className="rounded-lg bg-[#1e1e42] border border-[#6366f1]/20 p-2">
-                                  <div className="font-semibold text-blue-300 mb-1">Mavi</div>
-                                  <div className="flex justify-between"><span>Auto</span><span>{fmt(breakdown.blue.auto)}</span></div>
-                                  <div className="flex justify-between"><span>Teleop</span><span>{fmt(breakdown.blue.teleop)}</span></div>
-                                  <div className="flex justify-between"><span>Endgame</span><span>{fmt(breakdown.blue.endgame)}</span></div>
-                                  <div className="flex justify-between"><span>Penalty/Foul</span><span>{fmt(breakdown.blue.foul)}</span></div>
-                                  <div className="flex justify-between font-medium pt-1 border-t border-white/10 mt-1"><span>Toplam</span><span>{fmt(breakdown.blue.total)}</span></div>
-                                </div>
-                              </div>
-                            )}
-                          </details>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
               </div>
             </div>
           ) : scoutMatchList && scoutMatchList.length > 0 ? (
