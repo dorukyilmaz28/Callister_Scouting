@@ -58,6 +58,27 @@ export async function getNexusPitAddresses(
   return nexusGet<Record<string, string>>(`/event/${encodeURIComponent(eventKey)}/pits`);
 }
 
+/** Raw geometry for client-side SVG rendering (see Nexus API: get/event/{eventKey}/map). */
+export type NexusPitMapRect = {
+  position?: { x?: number; y?: number };
+  size?: { x?: number; y?: number };
+  label?: string;
+  team?: string;
+};
+
+export type NexusPitMap = {
+  size?: { x?: number; y?: number };
+  pits?: Record<string, NexusPitMapRect>;
+  areas?: Record<string, NexusPitMapRect> | null;
+  labels?: Record<string, NexusPitMapRect & { label?: string }> | null;
+  walls?: Record<string, NexusPitMapRect> | null;
+  arrows?: Record<string, unknown> | null;
+};
+
+export async function getNexusPitMap(eventKey: string): Promise<NexusPitMap | null> {
+  return nexusGet<NexusPitMap>(`/event/${encodeURIComponent(eventKey)}/map`);
+}
+
 export async function getNexusEvents(): Promise<Record<string, unknown> | null> {
   return nexusGet<Record<string, unknown>>("/events");
 }
