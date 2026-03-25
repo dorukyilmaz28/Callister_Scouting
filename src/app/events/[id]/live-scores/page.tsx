@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { MatchNotificationSubscribe } from "@/components/MatchNotificationSubscribe";
+import { NexusPitMapSvg } from "@/components/NexusPitMapSvg";
+import type { NexusPitMap } from "@/lib/nexus-api";
 
 type MatchScoreRow = {
   matchNumber?: number;
@@ -129,6 +131,7 @@ type NexusLivePayload = {
 type NexusPitsPayload = {
   eventKey: string | null;
   pits: Array<{ teamNumber: number; teamName: string | null; pitAddress: string | null }>;
+  pitMap?: NexusPitMap | null;
 };
 
 type TeamScoringPayload = {
@@ -153,6 +156,19 @@ type TeamScoringPayload = {
     };
   }>;
 };
+
+type FrcAllianceContextRow = TeamScoringPayload["rows"][number]["frcAllianceScoreContext"][number];
+
+function fmtFrcScore(n: number | null | undefined): string {
+  return n != null && Number.isFinite(n) ? String(n) : "—";
+}
+
+function lastThreeFrcByMatchNumber(ctx: FrcAllianceContextRow[]): FrcAllianceContextRow[] {
+  const withNum = ctx.filter(
+    (x): x is FrcAllianceContextRow & { matchNumber: number } => x.matchNumber != null
+  );
+  return [...withNum].sort((a, b) => b.matchNumber - a.matchNumber).slice(0, 3);
+}
 
 function normalizeSchedule(data: unknown): ScheduleItem[] {
   if (!data || typeof data !== "object") return [];
@@ -421,6 +437,21 @@ export default function LiveScoresPage() {
                   </li>
                 ))}
               </ul>
+              {nexusPits.pitMap?.size &&
+              typeof nexusPits.pitMap.size.x === "number" &&
+              typeof nexusPits.pitMap.size.y === "number" &&
+              nexusPits.pitMap.size.x > 0 &&
+              nexusPits.pitMap.size.y > 0 ? (
+                <details className="mt-3 rounded-xl border border-white/10 bg-white/[0.04] open:bg-white/[0.06]">
+                  <summary className="cursor-pointer list-none px-3 py-2.5 text-sm font-medium text-[#c7d2fe] select-none flex items-center justify-between gap-2">
+                    <span>Pit haritası (görsel)</span>
+                    <span className="text-[10px] font-normal text-[#e0e7ff]/50">aç / kapat</span>
+                  </summary>
+                  <div className="px-2 pb-3">
+                    <NexusPitMapSvg map={nexusPits.pitMap} assignments={nexusPits.pits} />
+                  </div>
+                </details>
+              ) : null}
             </div>
           )}
 
@@ -428,19 +459,71 @@ export default function LiveScoresPage() {
             <div className="card p-4 mb-4">
               <h3 className="text-sm font-semibold text-[#c7d2fe] mb-2">FRC + Scout Skor Görünümü</h3>
               <ul className="space-y-3">
-                {teamScoring.rows.map((row) => (
-                  <li key={row.teamNumber} className="border-b border-white/10 pb-2 last:border-0">
-                    <div className="text-sm font-medium text-[#e0e7ff]">
-                      Takım {row.teamNumber}{row.teamName ? ` (${row.teamName})` : ""}
-                    </div>
-                    <div className="text-xs text-[#e0e7ff]/75 mt-0.5">
-                      Scout: {row.scoutContribution.matchesScouted} maç · Auto ort {row.scoutContribution.avgAuto} · Teleop ort {row.scoutContribution.avgTeleop}
-                    </div>
-                    <div className="text-xs text-[#e0e7ff]/70">
-                      FRC maç bağlamı: {row.frcAllianceScoreContext.length} maç
-                    </div>
-                  </li>
-                ))}
+                {teamScoring.rows.map((row) => {
+                  const last3 = lastThreeFrcByMatchNumber(row.frcAllianceScoreContext);
+                  const last3Label =
+                    last3.length > 0
+                      ? last3.map((m) => `M${m.matchNumber}`).join(" · ")
+                      : null;
+                  return (
+                    <li key={row.teamNumber} className="border-b border-white/10 pb-2 last:border-0">
+                      <div className="text-sm font-medium text-[#e0e7ff]">
+                        Takım {row.teamNumber}{row.teamName ? ` (${row.teamName})` : ""}
+                      </div>
+                      <div className="text-xs text-[#e0e7ff]/75 mt-0.5">
+                        Scout: {row.scoutContribution.matchesScouted} maç · Auto ort {row.scoutContribution.avgAuto} · Teleop ort {row.scoutContribution.avgTeleop}
+                      </div>
+                      <div className="text-xs text-[#e0e7ff]/70">
+                        FRC maç bağlamı: {row.frcAllianceScoreContext.length} maç
+                        {last3Label ? (
+                          <span className="text-[#a5b4fc]/90"> · Son 3: {last3Label}</span>
+                        ) : null}
+                      </div>
+                      <details className="mt-2 rounded-lg border border-white/10 bg-white/[0.04] open:bg-white/[0.06]">
+                        <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[#c7d2fe] select-none flex items-center justify-between gap-2">
+                          <span>Son 3 maç — Auto / Teleop / Endgame (FRC ittifak)</span>
+                          <span className="text-[10px] font-normal text-[#e0e7ff]/50">aç</span>
+                        </summary>
+                        <div className="px-3 pb-3 pt-0 space-y-2">
+                          {last3.length === 0 ? (
+                            <p className="text-xs text-[#e0e7ff]/55">
+                              Bu takım için eşleşen FRC skor satırı yok veya maç numarası çıkarılamadı.
+                            </p>
+                          ) : (
+                            last3.map((m) => (
+                              <div
+                                key={`${row.teamNumber}-${m.matchNumber}`}
+                                className="rounded-md border border-white/10 bg-black/20 px-2.5 py-2 text-xs text-[#e0e7ff]/90"
+                              >
+                                <div className="font-medium text-[#e0e7ff] mb-1">
+                                  Maç #{m.matchNumber}
+                                  {m.alliance ? (
+                                    <span className="text-[#e0e7ff]/60 font-normal">
+                                      {" "}
+                                      · İttifak: {m.alliance === "red" ? "Kırmızı" : "Mavi"}
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[#e0e7ff]/80">
+                                  <span>Toplam (ittifak)</span>
+                                  <span className="text-right tabular-nums">
+                                    {fmtFrcScore(m.allianceTotalScore)}
+                                  </span>
+                                  <span>Auto</span>
+                                  <span className="text-right tabular-nums">{fmtFrcScore(m.auto)}</span>
+                                  <span>Teleop</span>
+                                  <span className="text-right tabular-nums">{fmtFrcScore(m.teleop)}</span>
+                                  <span>Endgame</span>
+                                  <span className="text-right tabular-nums">{fmtFrcScore(m.endgame)}</span>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </details>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
