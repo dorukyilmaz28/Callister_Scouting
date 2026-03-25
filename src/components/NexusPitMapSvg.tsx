@@ -50,17 +50,19 @@ export function NexusPitMapSvg({
   const labels = map.labels ?? {};
   const highlight = pitKeysToHighlight(pits, assignments);
 
-  const pitFont = Math.max(10, Math.min(16, Math.round(Math.min(w, h) / 55)));
+  // SVG user-space font; slightly larger divisor = bigger labels at same map scale
+  const pitFont = Math.max(12, Math.min(20, Math.round(Math.min(w, h) / 42)));
 
   return (
     <div className="mt-3 rounded-xl border border-white/10 bg-black/20 overflow-hidden">
-      <svg
-        viewBox={`0 0 ${w} ${h}`}
-        className="w-full max-h-[min(380px,55vh)] text-[#e0e7ff]"
-        preserveAspectRatio="xMidYMid meet"
-        role="img"
-        aria-label="Nexus pit haritası"
-      >
+      <div className="overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch]">
+        <svg
+          viewBox={`0 0 ${w} ${h}`}
+          className="block h-[min(70vh,720px)] w-auto min-w-full max-w-none text-[#e0e7ff] mx-auto sm:mx-0"
+          preserveAspectRatio="xMidYMid meet"
+          role="img"
+          aria-label="Nexus pit haritası"
+        >
         <rect x={0} y={0} width={w} height={h} fill="rgba(15,23,42,0.85)" />
 
         {Object.entries(walls).map(([id, r]) => {
@@ -172,7 +174,8 @@ export function NexusPitMapSvg({
             </text>
           );
         })}
-      </svg>
+        </svg>
+      </div>
       <p className="text-[10px] text-[#e0e7ff]/45 px-3 py-2 border-t border-white/10">
         Harita verisi{" "}
         <a
