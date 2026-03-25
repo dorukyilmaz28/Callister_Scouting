@@ -5,14 +5,14 @@ import { buildFrcUrl, getFrcAuthHeader, getSeasonAndEventCode } from "@/lib/frc-
 
 type FrcScoreRow = {
   matchNumber?: number;
-  redScore?: number;
-  blueScore?: number;
-  redAuto?: number;
-  blueAuto?: number;
-  redTeleop?: number;
-  blueTeleop?: number;
-  redEndgame?: number;
-  blueEndgame?: number;
+  redScore?: number | null;
+  blueScore?: number | null;
+  redAuto?: number | null;
+  blueAuto?: number | null;
+  redTeleop?: number | null;
+  blueTeleop?: number | null;
+  redEndgame?: number | null;
+  blueEndgame?: number | null;
 };
 
 function pickNumber(row: Record<string, unknown>, keys: string[]): number | null {
