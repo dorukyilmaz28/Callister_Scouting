@@ -17,6 +17,7 @@ Callister 9024 – FRC 2026 için mobil öncelikli dijital scouting uygulaması.
 - **Match scouting:** Auto (attempted, score, consistency), teleop (game pieces, cycle speed, defense), endgame (climb), driver skill, comments.
 - **Team summary:** Averages, climb rate, pit vs match comparison.
 - **Export:** Admin can download CSV (all data, team summaries, full event data).
+- **Nexus live integration:** Live queue/on-deck style data and pit addresses for assigned teams (if event is available in Nexus).
 
 ## Setup
 
@@ -36,6 +37,12 @@ JWT_SECRET="your-long-random-secret-at-least-32-chars"
 ```
 
 See `.env.example` for a template.
+
+### Optional API keys
+
+- `FRC_EVENTS_API_USER` + `FRC_EVENTS_API_KEY`: official live scores/schedule/rankings.
+- `NEXUS_API_KEY`: Nexus live event feed and pit addresses.
+- Note: Nexus live data coverage depends on event-level Nexus availability; some events may return partial or no data.
 
 ### 3. Push schema and seed admin
 

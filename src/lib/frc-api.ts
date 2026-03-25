@@ -47,4 +47,11 @@ export function buildFrcUrl(
   return `${FRC_API_BASE}/${season}/${path}/${encodeURIComponent(eventCode)}`;
 }
 
+/** Nexus event key: 2026 + txcmp => 2026txcmp */
+export function buildNexusEventKey(codeOrKey: string | null | undefined): string | null {
+  const parsed = getSeasonAndEventCode(codeOrKey);
+  if (!parsed) return null;
+  return `${parsed.season}${parsed.eventCode}`;
+}
+
 export { FRC_API_BASE };

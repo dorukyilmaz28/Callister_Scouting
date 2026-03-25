@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { MatchNotificationSubscribe } from "@/components/MatchNotificationSubscribe";
@@ -86,40 +86,6 @@ function getRedBlueScore(m: MatchScoreRow): { red: number | null; blue: number |
   };
 }
 
-function pickNumber(obj: Record<string, unknown>, keys: string[]): number | null {
-  for (const k of keys) {
-    const v = obj[k];
-    if (typeof v === "number" && Number.isFinite(v)) return v;
-  }
-  return null;
-}
-
-function getAllianceBreakdown(m: MatchScoreRow): {
-  red: { auto: number | null; teleop: number | null; endgame: number | null; foul: number | null; total: number | null };
-  blue: { auto: number | null; teleop: number | null; endgame: number | null; foul: number | null; total: number | null };
-} {
-  const o = m as unknown as Record<string, unknown>;
-  const { red: totalRed, blue: totalBlue } = getRedBlueScore(m);
-
-  const redAuto = pickNumber(o, ["redAuto", "red_auto", "autoRed", "redAutoPoints", "redAutoScore"]);
-  const blueAuto = pickNumber(o, ["blueAuto", "blue_auto", "autoBlue", "blueAutoPoints", "blueAutoScore"]);
-  const redTeleop = pickNumber(o, ["redTeleop", "red_teleop", "teleopRed", "redTeleopPoints", "redTeleopScore"]);
-  const blueTeleop = pickNumber(o, ["blueTeleop", "blue_teleop", "teleopBlue", "blueTeleopPoints", "blueTeleopScore"]);
-  const redEndgame = pickNumber(o, ["redEndGame", "redEndgame", "red_endgame", "endgameRed", "redEndgamePoints", "redEndGamePoints"]);
-  const blueEndgame = pickNumber(o, ["blueEndGame", "blueEndgame", "blue_endgame", "endgameBlue", "blueEndgamePoints", "blueEndGamePoints"]);
-  const redFoul = pickNumber(o, ["redFoul", "redFouls", "redPenalty", "redFoulPoints", "redPenaltyPoints", "foulRed", "penaltyRed"]);
-  const blueFoul = pickNumber(o, ["blueFoul", "blueFouls", "bluePenalty", "blueFoulPoints", "bluePenaltyPoints", "foulBlue", "penaltyBlue"]);
-
-  return {
-    red: { auto: redAuto, teleop: redTeleop, endgame: redEndgame, foul: redFoul, total: totalRed },
-    blue: { auto: blueAuto, teleop: blueTeleop, endgame: blueEndgame, foul: blueFoul, total: totalBlue },
-  };
-}
-
-function fmt(n: number | null): string {
-  return typeof n === "number" ? String(n) : "—";
-}
-
 function getMatchLabel(item: ScheduleItem, fallbackNum: number): string {
   const level = (item.tournamentLevel ?? "").toLowerCase();
   const num = item.matchNumber ?? fallbackNum;
@@ -147,6 +113,45 @@ type ScheduleItem = {
   startTime?: string;
   tournamentLevel?: string;
   teams?: ScheduleTeam[];
+};
+
+type NexusLivePayload = {
+  eventKey: string | null;
+  nowQueuing: string | null;
+  matches: Array<{
+    label?: string | null;
+    status?: string | null;
+    redTeams?: string[];
+    blueTeams?: string[];
+  }>;
+};
+
+type NexusPitsPayload = {
+  eventKey: string | null;
+  pits: Array<{ teamNumber: number; teamName: string | null; pitAddress: string | null }>;
+};
+
+type TeamScoringPayload = {
+  rows: Array<{
+    teamNumber: number;
+    teamName: string | null;
+    source: "frc" | "none";
+    frcAllianceScoreContext: Array<{
+      matchNumber: number | null;
+      alliance: "red" | "blue" | null;
+      allianceTotalScore: number | null;
+      auto: number | null;
+      teleop: number | null;
+      endgame: number | null;
+    }>;
+    scoutContribution: {
+      matchesScouted: number;
+      avgAuto: number;
+      avgTeleop: number;
+      totalAuto: number;
+      totalTeleop: number;
+    };
+  }>;
 };
 
 function normalizeSchedule(data: unknown): ScheduleItem[] {
@@ -180,6 +185,9 @@ export default function LiveScoresPage() {
     }>;
   }> | null>(null);
   const [activeTab, setActiveTab] = useState<"scores" | "schedule" | "rankings">("scores");
+  const [nexusLive, setNexusLive] = useState<NexusLivePayload | null>(null);
+  const [nexusPits, setNexusPits] = useState<NexusPitsPayload | null>(null);
+  const [teamScoring, setTeamScoring] = useState<TeamScoringPayload | null>(null);
 
   const rankingRows = normalizeRankings(rankings);
   const scheduleItems = normalizeSchedule(schedule);
@@ -223,7 +231,7 @@ export default function LiveScoresPage() {
       .catch(() => setTeamNamesByNumber({}));
   }, [eventId]);
 
-  function loadMatchResults() {
+  const loadMatchResults = useCallback(() => {
     setError(null);
     setLoading(true);
     fetch(`/api/events/${eventId}/frc/match-results`, { cache: "no-store" })
@@ -253,27 +261,55 @@ export default function LiveScoresPage() {
           .catch(() => setScoutMatchList(null));
       })
       .finally(() => setLoading(false));
-  }
+  }, [eventId]);
 
-  function loadSchedule() {
+  const loadSchedule = useCallback(() => {
     fetch(`/api/events/${eventId}/frc/schedule`, { cache: "no-store" })
       .then((r) => r.json())
       .then(setSchedule)
       .catch(() => setSchedule(null));
-  }
+  }, [eventId]);
 
-  function loadRankings() {
+  const loadRankings = useCallback(() => {
     fetch(`/api/events/${eventId}/frc/rankings`, { cache: "no-store" })
       .then((r) => r.json())
       .then(setRankings)
       .catch(() => setRankings(null));
-  }
+  }, [eventId]);
+
+  const loadNexusData = useCallback(() => {
+    fetch(`/api/events/${eventId}/nexus/live`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setNexusLive(d))
+      .catch(() => setNexusLive(null));
+
+    fetch(`/api/events/${eventId}/nexus/pits`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setNexusPits(d))
+      .catch(() => setNexusPits(null));
+
+    fetch(`/api/events/${eventId}/live-team-scoring`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setTeamScoring(d))
+      .catch(() => setTeamScoring(null));
+  }, [eventId]);
 
   useEffect(() => {
-    loadMatchResults();
-    loadSchedule();
-    loadRankings();
-  }, [eventId]);
+    const timer = setTimeout(() => {
+      loadMatchResults();
+      loadSchedule();
+      loadRankings();
+      loadNexusData();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadMatchResults, loadNexusData, loadRankings, loadSchedule]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      loadNexusData();
+    }, 12000);
+    return () => clearInterval(timer);
+  }, [loadNexusData]);
 
   return (
     <div className="app-shell pt-4 pb-8">
@@ -281,7 +317,7 @@ export default function LiveScoresPage() {
         <h1 className="text-xl font-bold text-[#f0f0f5]">Canlı Skorlar</h1>
         <button
           type="button"
-          onClick={() => { loadMatchResults(); loadSchedule(); loadRankings(); }}
+          onClick={() => { loadMatchResults(); loadSchedule(); loadRankings(); loadNexusData(); }}
           disabled={loading}
           className="py-2 px-4 rounded-xl bg-white/10 text-[#e0e7ff] text-sm font-medium hover:bg-white/15 disabled:opacity-60"
         >
@@ -327,6 +363,88 @@ export default function LiveScoresPage() {
 
       {activeTab === "scores" && (
         <>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
+            <div className="card p-4">
+              <div className="text-xs text-[#a5b4fc] mb-1">Nexus Live</div>
+              <div className="text-sm text-[#e0e7ff]">
+                {nexusLive?.nowQueuing ? `Şu an kuyruğa giren: ${nexusLive.nowQueuing}` : "Canlı sıra bilgisi yok"}
+              </div>
+              <div className="text-xs text-[#e0e7ff]/70 mt-2">
+                {nexusLive?.matches?.length ?? 0} ilgili maç bulundu
+              </div>
+            </div>
+            <div className="card p-4">
+              <div className="text-xs text-[#a5b4fc] mb-1">Seçtiğim Takımlar - Pit</div>
+              <div className="text-sm text-[#e0e7ff]">
+                {nexusPits?.pits?.filter((p) => !!p.pitAddress).length ?? 0} pit konumu geldi
+              </div>
+              <div className="text-xs text-[#e0e7ff]/70 mt-2">
+                Toplam: {nexusPits?.pits?.length ?? 0} takım
+              </div>
+            </div>
+            <div className="card p-4">
+              <div className="text-xs text-[#a5b4fc] mb-1">Skor Görünümü</div>
+              <div className="text-sm text-[#e0e7ff]">
+                {teamScoring?.rows?.length ?? 0} takım için FRC + Scout verisi
+              </div>
+              <div className="text-xs text-[#e0e7ff]/70 mt-2">
+                Kaynak: {teamScoring?.rows?.some((r) => r.source === "frc") ? "FRC Events + Scout" : "Scout"}
+              </div>
+            </div>
+          </div>
+
+          {!!nexusLive?.matches?.length && (
+            <div className="card p-4 mb-4">
+              <h3 className="text-sm font-semibold text-[#c7d2fe] mb-2">Nexus Canlı Maçlar (Seçtiğin Takımlar)</h3>
+              <ul className="space-y-2 text-sm text-[#e0e7ff]/90">
+                {nexusLive.matches.slice(0, 8).map((m, idx) => (
+                  <li key={`${m.label ?? idx}-${idx}`} className="border-b border-white/10 pb-2 last:border-0">
+                    <div className="font-medium">{m.label ?? `Maç ${idx + 1}`}</div>
+                    <div className="text-xs text-[#e0e7ff]/70 mt-0.5">
+                      Durum: {m.status ?? "bilinmiyor"} · Red: {(m.redTeams ?? []).join(", ") || "—"} · Blue: {(m.blueTeams ?? []).join(", ") || "—"}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {!!nexusPits?.pits?.length && (
+            <div className="card p-4 mb-4">
+              <h3 className="text-sm font-semibold text-[#c7d2fe] mb-2">Pit Adresleri</h3>
+              <ul className="space-y-1.5 text-sm text-[#e0e7ff]/90">
+                {nexusPits.pits.map((p) => (
+                  <li key={p.teamNumber}>
+                    <span className="font-medium">#{p.teamNumber}</span>
+                    {p.teamName ? ` (${p.teamName})` : ""}:{" "}
+                    <span className="text-[#e0e7ff]/75">{p.pitAddress ?? "Nexus verisi yok"}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {!!teamScoring?.rows?.length && (
+            <div className="card p-4 mb-4">
+              <h3 className="text-sm font-semibold text-[#c7d2fe] mb-2">FRC + Scout Skor Görünümü</h3>
+              <ul className="space-y-3">
+                {teamScoring.rows.map((row) => (
+                  <li key={row.teamNumber} className="border-b border-white/10 pb-2 last:border-0">
+                    <div className="text-sm font-medium text-[#e0e7ff]">
+                      Takım {row.teamNumber}{row.teamName ? ` (${row.teamName})` : ""}
+                    </div>
+                    <div className="text-xs text-[#e0e7ff]/75 mt-0.5">
+                      Scout: {row.scoutContribution.matchesScouted} maç · Auto ort {row.scoutContribution.avgAuto} · Teleop ort {row.scoutContribution.avgTeleop}
+                    </div>
+                    <div className="text-xs text-[#e0e7ff]/70">
+                      FRC maç bağlamı: {row.frcAllianceScoreContext.length} maç
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {loading && matches.length === 0 && !scoutMatchList?.length ? (
             <div className="card p-8 text-center">
               <p className="text-[#e0e7ff]/70">Yükleniyor…</p>
