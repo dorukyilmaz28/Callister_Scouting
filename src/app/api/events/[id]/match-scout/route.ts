@@ -64,6 +64,8 @@ export async function POST(request: Request) {
       autoDescription,
       autoConsistency,
       gamePieceCount,
+      teleopShotAttempts,
+      teleopShotMade,
       cycleSpeed,
       defensePlayed,
       climbAttempted,
@@ -86,6 +88,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Geçersiz maç veya takım numarası" }, { status: 400 });
     }
     const mt = matchType === "playoff" ? "playoff" : "qual";
+    const parsedTeleopAttempts =
+      teleopShotAttempts != null && !Number.isNaN(Number(teleopShotAttempts))
+        ? Math.max(0, Number(teleopShotAttempts))
+        : 0;
+    const hasTeleopShotMade = teleopShotMade != null && !Number.isNaN(Number(teleopShotMade));
+    const parsedTeleopMade = hasTeleopShotMade ? Math.max(0, Number(teleopShotMade)) : 0;
+    const normalizedGamePieceCount = hasTeleopShotMade
+      ? parsedTeleopMade
+      : (Number(gamePieceCount) || 0);
 
     let match = await prisma.match.findFirst({
       where: { eventId, matchNumber: mn, matchType: mt },
@@ -131,7 +142,9 @@ export async function POST(request: Request) {
         autoScoreCount: Number(autoScoreCount) ?? 0,
         autoDescription: autoDescription ?? null,
         autoConsistency: autoConsistency != null ? Number(autoConsistency) : null,
-        gamePieceCount: Number(gamePieceCount) ?? 0,
+        gamePieceCount: normalizedGamePieceCount,
+        teleopShotAttempts: parsedTeleopAttempts,
+        teleopShotMade: parsedTeleopMade,
         cycleSpeed: cycleSpeed ?? null,
         defensePlayed: !!defensePlayed,
         climbAttempted: !!climbAttempted,
@@ -147,7 +160,9 @@ export async function POST(request: Request) {
         autoScoreCount: Number(autoScoreCount) ?? 0,
         autoDescription: autoDescription ?? null,
         autoConsistency: autoConsistency != null ? Number(autoConsistency) : null,
-        gamePieceCount: Number(gamePieceCount) ?? 0,
+        gamePieceCount: normalizedGamePieceCount,
+        teleopShotAttempts: parsedTeleopAttempts,
+        teleopShotMade: parsedTeleopMade,
         cycleSpeed: cycleSpeed ?? null,
         defensePlayed: !!defensePlayed,
         climbAttempted: !!climbAttempted,

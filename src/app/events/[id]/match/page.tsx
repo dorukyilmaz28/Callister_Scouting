@@ -12,6 +12,8 @@ type MatchScout = {
   autoDescription: string | null;
   autoConsistency: number | null;
   gamePieceCount: number;
+  teleopShotAttempts: number;
+  teleopShotMade: number;
   cycleSpeed: string | null;
   defensePlayed: boolean;
   climbAttempted: boolean;
@@ -29,6 +31,8 @@ const bosForm: MatchScout = {
   autoDescription: null,
   autoConsistency: null,
   gamePieceCount: 0,
+  teleopShotAttempts: 0,
+  teleopShotMade: 0,
   cycleSpeed: null,
   defensePlayed: false,
   climbAttempted: false,
@@ -40,7 +44,26 @@ const bosForm: MatchScout = {
   autonomousRouteWaypoints: null,
 };
 
-function Stepper({ value, onChange, min = 0 }: { value: number; onChange: (n: number) => void; min?: number }) {
+function Stepper({
+  value,
+  onChange,
+  min = 0,
+  editable = false,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  min?: number;
+  editable?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+
+  function commitDraft() {
+    const parsed = Number(draft);
+    onChange(Number.isFinite(parsed) ? Math.max(min, parsed) : value);
+    setEditing(false);
+  }
+
   return (
     <div className="flex items-center gap-4">
       <button
@@ -50,7 +73,39 @@ function Stepper({ value, onChange, min = 0 }: { value: number; onChange: (n: nu
       >
         −
       </button>
-      <span className="min-w-[3rem] text-center font-bold text-[#e0e7ff] text-2xl">{value}</span>
+      {editable && editing ? (
+        <input
+          type="number"
+          min={min}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commitDraft}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commitDraft();
+            if (e.key === "Escape") {
+              setDraft(String(value));
+              setEditing(false);
+            }
+          }}
+          autoFocus
+          className="w-20 min-h-[48px] rounded-lg border border-[#475569] bg-[#1e1e42] text-center font-bold text-[#e0e7ff] text-xl outline-none focus:border-[#6366f1]"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            if (!editable) return;
+            setDraft(String(value));
+            setEditing(true);
+          }}
+          className={`min-w-[3rem] text-center font-bold text-[#e0e7ff] text-2xl ${
+            editable ? "rounded-lg px-2 py-1 hover:bg-white/10" : ""
+          }`}
+          aria-label="Sayıyı düzenle"
+        >
+          {value}
+        </button>
+      )}
       <button
         type="button"
         onClick={() => onChange(value + 1)}
@@ -120,6 +175,8 @@ export default function MatchScoutPage() {
             autoDescription: one.autoDescription ?? null,
             autoConsistency: one.autoConsistency ?? null,
             gamePieceCount: one.gamePieceCount ?? 0,
+            teleopShotAttempts: one.teleopShotAttempts ?? 0,
+            teleopShotMade: one.teleopShotMade ?? one.gamePieceCount ?? 0,
             cycleSpeed: one.cycleSpeed ?? null,
             defensePlayed: one.defensePlayed ?? false,
             climbAttempted: one.climbAttempted ?? false,
@@ -182,6 +239,10 @@ export default function MatchScoutPage() {
   const mn = matchNumber.trim();
   const tn = teamNumber.trim();
   const canProceed = mn && tn && !Number.isNaN(parseInt(mn, 10)) && !Number.isNaN(parseInt(tn, 10));
+  const teleopShotPct =
+    form.teleopShotAttempts > 0
+      ? Math.round((form.teleopShotMade / form.teleopShotAttempts) * 100)
+      : 0;
 
   if (!teamsLoaded) {
     return (
@@ -304,8 +365,62 @@ export default function MatchScoutPage() {
 
           <h2 className="font-semibold text-[#e0e7ff] pt-2">TELEOP</h2>
           <div>
-            <label className="block text-sm font-medium text-[#e0e7ff] mb-2">Parça sayısı</label>
-            <Stepper value={form.gamePieceCount} onChange={(n) => setForm((f) => ({ ...f, gamePieceCount: n }))} />
+            <label className="block text-sm font-medium text-[#e0e7ff] mb-2">Teleop deneme sayısı</label>
+            <Stepper
+              value={form.teleopShotAttempts}
+              editable
+              onChange={(n) =>
+                setForm((f) => {
+                  const attempts = Math.max(0, n);
+                  const made = Math.min(f.teleopShotMade, attempts);
+                  return {
+                    ...f,
+                    teleopShotAttempts: attempts,
+                    teleopShotMade: made,
+                    gamePieceCount: made,
+                  };
+                })
+              }
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#e0e7ff] mb-2">
+              Yaklaşık kaç tanesi girdi (isabet)
+            </label>
+            <Stepper
+              value={form.teleopShotMade}
+              editable
+              onChange={(n) =>
+                setForm((f) => {
+                  const made = Math.max(0, Math.min(n, f.teleopShotAttempts));
+                  return { ...f, teleopShotMade: made, gamePieceCount: made };
+                })
+              }
+            />
+            <div className="mt-2 flex gap-2 flex-wrap">
+              {[10, 20, 30, 40].map((pct) => (
+                <button
+                  key={pct}
+                  type="button"
+                  onClick={() =>
+                    setForm((f) => {
+                      if (f.teleopShotAttempts <= 0) {
+                        return { ...f, teleopShotMade: 0, gamePieceCount: 0 };
+                      }
+                      const made = Math.round((f.teleopShotAttempts * pct) / 100);
+                      return { ...f, teleopShotMade: made, gamePieceCount: made };
+                    })
+                  }
+                  className="rounded-lg border border-[#475569] bg-[#1e1e42] px-3 py-1.5 text-sm text-[#e0e7ff] hover:bg-[#334155]"
+                >
+                  %{pct}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-[#e0e7ff]/70">
+              İsabet: %{teleopShotPct}
+              {form.teleopShotAttempts <= 0 ? " (önce deneme sayısı girin)" : ""}
+            </p>
           </div>
           <label className="option-row w-full cursor-pointer">
             <input

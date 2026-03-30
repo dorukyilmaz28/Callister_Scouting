@@ -177,6 +177,8 @@ model MatchScout {
   autoConsistency  Int?    @map("auto_consistency")  // 1-5
   // Teleop
   gamePieceCount   Int     @default(0) @map("game_piece_count")
+  teleopShotAttempts Int   @default(0) @map("teleop_shot_attempts")
+  teleopShotMade     Int   @default(0) @map("teleop_shot_made")
   cycleSpeed       String? @map("cycle_speed")
   defensePlayed    Boolean @default(false) @map("defense_played")
   // Endgame
