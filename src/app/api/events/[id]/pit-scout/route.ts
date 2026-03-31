@@ -20,13 +20,14 @@ export async function GET(
       });
       const teamIds = assignments.map((a) => a.teamId);
       const pitScouts = await prisma.pitScout.findMany({
-        where: { eventId, teamId: { in: teamIds } },
+        where: { eventId, userId: session.id, teamId: { in: teamIds } },
         include: { team: true, user: true },
       });
       return NextResponse.json(pitScouts);
     }
-    const where: { eventId: string; teamId?: string } = { eventId };
+    const where: { eventId: string; teamId?: string; userId?: string } = { eventId };
     if (teamId) where.teamId = teamId;
+    if (isScout) where.userId = session.id;
     if (isScout) {
       const assignments = await prisma.scoutAssignment.findMany({
         where: { eventId, userId: session.id },
@@ -36,7 +37,7 @@ export async function GET(
       where.teamId = teamId && allowedTeamIds.includes(teamId) ? teamId : undefined;
       if (!teamId) {
         const pitScouts = await prisma.pitScout.findMany({
-          where: { eventId, teamId: { in: allowedTeamIds } },
+          where: { eventId, userId: session.id, teamId: { in: allowedTeamIds } },
           include: { team: true, user: true },
         });
         return NextResponse.json(pitScouts);
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
     }
     const pit = await prisma.pitScout.upsert({
       where: {
-        eventId_teamId: { eventId, teamId },
+        eventId_teamId_userId: { eventId, teamId, userId: session.id },
       },
       create: {
         eventId,

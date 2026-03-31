@@ -122,7 +122,7 @@ model ScoutAssignment {
   @@index([eventId, userId])
 }
 
-// Pit scouting: one record per team per event (updated on re-submit)
+// Pit scouting: one record per team per event per user (updated on re-submit)
 model PitScout {
   id                String   @id @default(cuid())
   eventId           String
@@ -144,7 +144,7 @@ model PitScout {
   team  Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([eventId, teamId])
+  @@unique([eventId, teamId, userId])
   @@index([eventId])
   @@index([teamId])
 }

@@ -23,7 +23,7 @@ export async function GET(
     const teams = await Promise.all(
       assignments.map(async (a) => {
         const pit = await prisma.pitScout.findUnique({
-          where: { eventId_teamId: { eventId, teamId: a.teamId } },
+          where: { eventId_teamId_userId: { eventId, teamId: a.teamId, userId } },
         });
         const matchCount = await prisma.matchScout.count({
           where: { eventId, teamId: a.teamId },
