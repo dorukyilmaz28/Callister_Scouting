@@ -43,6 +43,7 @@ export const CLIMB_TYPE_OPTIONS = [
 ] as const;
 
 export const MATCH_TYPE_OPTIONS = [
+  { value: "practice", label: "Practice" },
   { value: "qual", label: "Qual" },
   { value: "playoff", label: "Playoff" },
 ] as const;

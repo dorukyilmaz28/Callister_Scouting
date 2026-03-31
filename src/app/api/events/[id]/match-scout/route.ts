@@ -89,7 +89,7 @@ export async function POST(request: Request) {
     if (Number.isNaN(mn) || Number.isNaN(tn)) {
       return NextResponse.json({ error: "Geçersiz maç veya takım numarası" }, { status: 400 });
     }
-    const mt = matchType === "playoff" ? "playoff" : "qual";
+    const mt = matchType === "playoff" || matchType === "practice" ? matchType : "qual";
     const parsedTeleopAttempts =
       teleopShotAttempts != null && !Number.isNaN(Number(teleopShotAttempts))
         ? Math.max(0, Number(teleopShotAttempts))
