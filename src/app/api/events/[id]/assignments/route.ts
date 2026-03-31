@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRole, getSession } from "@/lib/auth";
 
-const MAX_TEAMS_PER_SCOUT = 2;
-
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -46,12 +44,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (teamIds.length !== MAX_TEAMS_PER_SCOUT) {
-      return NextResponse.json(
-        { error: `Exactly ${MAX_TEAMS_PER_SCOUT} teams per scout required` },
-        { status: 400 }
-      );
-    }
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       include: { eventTeams: true },
@@ -71,10 +63,11 @@ export async function POST(request: Request) {
       );
     }
 
+    const requested = Array.from(new Set(teamIds as string[]));
     const validTeamIds = event.eventTeams
-      .filter((et) => teamIds.includes(et.teamId))
+      .filter((et) => requested.includes(et.teamId))
       .map((et) => et.teamId);
-    if (validTeamIds.length !== MAX_TEAMS_PER_SCOUT) {
+    if (validTeamIds.length !== requested.length) {
       return NextResponse.json(
         { error: "All teamIds must be in this event" },
         { status: 400 }

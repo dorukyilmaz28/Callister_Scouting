@@ -52,17 +52,15 @@ export default function AssignPage() {
   function toggleTeam(teamId: string) {
     setSelectedTeams((prev) => {
       if (prev.includes(teamId)) {
-        const next = prev.filter((id) => id !== teamId);
-        return next.length <= 2 ? next : prev;
+        return prev.filter((id) => id !== teamId);
       }
-      if (prev.length >= 2) return prev;
       return [...prev, teamId];
     });
   }
 
   async function save() {
-    if (!selectedUser || selectedTeams.length !== 2) {
-      setMessage({ type: "err", text: "Bir scout ve tam 2 takım seçin." });
+    if (!selectedUser) {
+      setMessage({ type: "err", text: "Bir scout seçin." });
       return;
     }
     setSaving(true);
@@ -84,7 +82,7 @@ export default function AssignPage() {
       }
       const updated = await fetch(`/api/events/${eventId}/assignments`).then((r) => r.json());
       setAssignments(updated);
-      setMessage({ type: "ok", text: "Kaydedildi. Scout'a tam 2 takım atandı." });
+      setMessage({ type: "ok", text: "Kaydedildi." });
     } catch {
       setMessage({ type: "err", text: "Bağlantı hatası" });
     } finally {
@@ -104,7 +102,7 @@ export default function AssignPage() {
     <div className="space-y-6">
       <h1 className="text-xl font-bold text-gray-900">Scout’lara takım ata</h1>
       <p className="text-gray-600 text-sm">
-        Her scout’a bu etkinlik için tam 2 takım atanmalı.
+        Admin, her scout için bu etkinlikte istediği kadar takım atayabilir.
       </p>
 
       <div className="card p-4">
@@ -135,7 +133,7 @@ export default function AssignPage() {
               : "Henüz atama yok"}
           </div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Takımlar (tam 2 seçin)
+            Takımlar (istediğin kadar seç)
           </label>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
             {teams.map((t) => (
@@ -154,7 +152,7 @@ export default function AssignPage() {
             ))}
           </div>
           <p className="mt-2 text-sm text-gray-500">
-            Seçili: {selectedTeams.length}/2
+            Seçili: {selectedTeams.length}
           </p>
         </div>
       )}
@@ -167,7 +165,7 @@ export default function AssignPage() {
       <button
         type="button"
         onClick={save}
-        disabled={saving || !selectedUser || selectedTeams.length !== 2}
+        disabled={saving || !selectedUser}
         className="w-full py-4 text-lg font-semibold rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
       >
         {saving ? "Kaydediliyor…" : "Atamayı kaydet"}
