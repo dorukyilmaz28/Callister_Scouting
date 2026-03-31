@@ -6,6 +6,45 @@ export const maxDuration = 60;
 
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
+async function callGemini(key: string, prompt: string): Promise<{
+  text: string;
+  finishReason: string | null;
+}> {
+  const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(key)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        maxOutputTokens: 6000,
+        temperature: 0.4,
+      },
+    }),
+    signal: AbortSignal.timeout(50000),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    console.warn("[ai-analyze] Gemini API", res.status, err.slice(0, 200));
+    throw new Error("Gemini request failed");
+  }
+
+  const data = (await res.json()) as {
+    candidates?: {
+      finishReason?: string;
+      content?: { parts?: { text?: string }[] };
+    }[];
+  };
+
+  const candidate = data.candidates?.[0];
+  const parts = candidate?.content?.parts ?? [];
+  const text = parts.map((p) => p?.text ?? "").join("").trim();
+  return {
+    text: text || "Analiz oluşturulamadı.",
+    finishReason: candidate?.finishReason ?? null,
+  };
+}
+
 function buildScoutSummary(args: {
   event: { name: string; code: string; teamCount: number };
   pitScouts: {
@@ -145,38 +184,35 @@ export async function POST(
       : "ÖNEMLİ: Aşağıdaki veriler, SADECE giriş yapan kullanıcının kendi pit ve maç scout girişleridir. Başka kullanıcı verisi yoktur ve kullanmayacaksın.";
     const prompt = `Sen FRC (FIRST Robotics Competition) scout verilerini analiz eden \"Callister AI\" asistanısın.\n\n${scopeLine}\n\nBu verileri inceleyip Türkçe, kısa ve öz bir analiz yaz: hangi takımlar öne çıkıyor, güçlü/zayıf yönler, takım taktikleri veya notlar hakkında yorum yap. Sadece verilen verilere dayan. Yanıtını 2–3 paragrafta tamamla, kesinlikle yarıda bırakma.\n\n---\n\n${summary}`;
 
-    const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(key)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          maxOutputTokens: 3000,
-          temperature: 0.4,
-        },
-      }),
-      signal: AbortSignal.timeout(50000),
-    });
-
-    if (!res.ok) {
-      const err = await res.text();
-      console.warn("[ai-analyze] Gemini API", res.status, err.slice(0, 200));
+    let first: { text: string; finishReason: string | null };
+    try {
+      first = await callGemini(key, prompt);
+    } catch {
       return NextResponse.json(
         { error: "AI yanıt vermedi. API anahtarını ve kotayı kontrol edin." },
         { status: 502 }
       );
     }
 
-    const data = (await res.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-    const parts = data.candidates?.[0]?.content?.parts ?? [];
-    const text = parts
-      .map((p) => p?.text ?? "")
-      .join("")
-      .trim() || "Analiz oluşturulamadı.";
+    let analysis = first.text;
+    const likelyTruncated =
+      first.finishReason === "MAX_TOKENS" ||
+      (!/[.!?…]$/.test(analysis) && analysis.length > 300);
 
-    return NextResponse.json({ analysis: text });
+    if (likelyTruncated) {
+      const continuePrompt = `Aşağıdaki analizi KALDIĞIN YERDEN devam ettir ve tamamla. Tekrar etme.\n\nMevcut metin:\n${analysis}`;
+      try {
+        const continuation = await callGemini(key, continuePrompt);
+        const extra = continuation.text.trim();
+        if (extra && extra !== "Analiz oluşturulamadı.") {
+          analysis = `${analysis}\n\n${extra}`;
+        }
+      } catch {
+        // İlk yanıtı koru; devam çağrısı başarısız olsa da analiz dönsün.
+      }
+    }
+
+    return NextResponse.json({ analysis });
   } catch (e) {
     console.error("[ai-analyze]", e);
     return NextResponse.json(
