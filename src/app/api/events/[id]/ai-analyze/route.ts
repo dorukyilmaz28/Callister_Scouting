@@ -170,9 +170,11 @@ export async function POST(
     const data = (await res.json()) as {
       candidates?: { content?: { parts?: { text?: string }[] } }[];
     };
-    const text =
-      data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ??
-      "Analiz oluşturulamadı.";
+    const parts = data.candidates?.[0]?.content?.parts ?? [];
+    const text = parts
+      .map((p) => p?.text ?? "")
+      .join("")
+      .trim() || "Analiz oluşturulamadı.";
 
     return NextResponse.json({ analysis: text });
   } catch (e) {
