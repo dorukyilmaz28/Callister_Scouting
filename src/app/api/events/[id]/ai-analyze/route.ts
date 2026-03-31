@@ -112,14 +112,16 @@ export async function POST(
     });
     if (!event) return NextResponse.json({ error: "Etkinlik bulunamadı" }, { status: 404 });
 
+    const isAdminLike = session.role === "admin" || session.role === "strategy";
+
     const pitScouts = await prisma.pitScout.findMany({
-      where: { eventId, userId: session.id },
+      where: isAdminLike ? { eventId } : { eventId, userId: session.id },
       include: { team: true },
       orderBy: { updatedAt: "desc" },
     });
 
     const matchScouts = await prisma.matchScout.findMany({
-      where: { eventId, userId: session.id },
+      where: isAdminLike ? { eventId } : { eventId, userId: session.id },
       include: { team: true, match: true },
       orderBy: [{ match: { matchNumber: "asc" } }, { match: { matchType: "asc" } }],
     });
@@ -132,11 +134,16 @@ export async function POST(
     if (summary.length < 100) {
       return NextResponse.json({
         analysis:
-          "Bu etkinlikte henüz senin girdiğin yeterli pit veya maç scout verisi yok. Birkaç takım için pit ve maç girişi yaptıktan sonra tekrar deneyin.",
+          isAdminLike
+            ? "Bu etkinlikte AI analiz için yeterli pit veya maç scout verisi yok."
+            : "Bu etkinlikte henüz senin girdiğin yeterli pit veya maç scout verisi yok. Birkaç takım için pit ve maç girişi yaptıktan sonra tekrar deneyin.",
       });
     }
 
-    const prompt = `Sen FRC (FIRST Robotics Competition) scout verilerini analiz eden \"Callister AI\" asistanısın.\n\nÖNEMLİ: Aşağıdaki veriler, SADECE giriş yapan kullanıcının kendi pit ve maç scout girişleridir. Başka kullanıcı verisi yoktur ve kullanmayacaksın.\n\nBu verileri inceleyip Türkçe, kısa ve öz bir analiz yaz: hangi takımlar öne çıkıyor, güçlü/zayıf yönler, takım taktikleri veya notlar hakkında yorum yap. Sadece verilen verilere dayan. Yanıtını 2–3 paragrafta tamamla, kesinlikle yarıda bırakma.\n\n---\n\n${summary}`;
+    const scopeLine = isAdminLike
+      ? "ÖNEMLİ: Aşağıdaki veriler etkinlikteki TÜM kullanıcıların pit ve maç scout girişlerinden derlenmiştir."
+      : "ÖNEMLİ: Aşağıdaki veriler, SADECE giriş yapan kullanıcının kendi pit ve maç scout girişleridir. Başka kullanıcı verisi yoktur ve kullanmayacaksın.";
+    const prompt = `Sen FRC (FIRST Robotics Competition) scout verilerini analiz eden \"Callister AI\" asistanısın.\n\n${scopeLine}\n\nBu verileri inceleyip Türkçe, kısa ve öz bir analiz yaz: hangi takımlar öne çıkıyor, güçlü/zayıf yönler, takım taktikleri veya notlar hakkında yorum yap. Sadece verilen verilere dayan. Yanıtını 2–3 paragrafta tamamla, kesinlikle yarıda bırakma.\n\n---\n\n${summary}`;
 
     const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(key)}`, {
       method: "POST",
