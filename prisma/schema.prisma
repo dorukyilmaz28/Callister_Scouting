@@ -163,7 +163,7 @@ model Match {
   @@index([eventId])
 }
 
-// One entry per match per team
+// One entry per match per team per user
 model MatchScout {
   id        String   @id @default(cuid())
   eventId   String
@@ -198,7 +198,7 @@ model MatchScout {
   team  Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([matchId, teamId])
+  @@unique([matchId, teamId, userId])
   @@index([eventId])
   @@index([teamId])
 }

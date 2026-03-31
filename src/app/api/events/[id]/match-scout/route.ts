@@ -34,7 +34,9 @@ export async function GET(
       return NextResponse.json(null);
     }
     const scout = await prisma.matchScout.findUnique({
-      where: { matchId_teamId: { matchId: match.id, teamId: team.id } },
+      where: {
+        matchId_teamId_userId: { matchId: match.id, teamId: team.id, userId: session.id },
+      },
       include: { team: true, match: true },
     });
     return NextResponse.json(scout);
@@ -132,7 +134,9 @@ export async function POST(request: Request) {
     });
 
     const scout = await prisma.matchScout.upsert({
-      where: { matchId_teamId: { matchId: match.id, teamId: team.id } },
+      where: {
+        matchId_teamId_userId: { matchId: match.id, teamId: team.id, userId: session.id },
+      },
       create: {
         eventId,
         matchId: match.id,
