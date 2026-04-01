@@ -45,7 +45,10 @@ export async function GET(
     const metrics = await Promise.all(
       eventTeams.map(async (et): Promise<TeamMetric> => {
         const matchScouts = await prisma.matchScout.findMany({
-          where: { eventId, teamId: et.teamId },
+          where:
+            session.role === "scout"
+              ? { eventId, teamId: et.teamId, userId: session.id }
+              : { eventId, teamId: et.teamId },
           select: {
             autoScoreCount: true,
             gamePieceCount: true,

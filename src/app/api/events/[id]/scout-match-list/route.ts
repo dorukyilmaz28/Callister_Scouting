@@ -13,7 +13,10 @@ export async function GET(
     const { id: eventId } = await params;
 
     const matchScouts = await prisma.matchScout.findMany({
-      where: { eventId },
+      where:
+        session.role === "scout"
+          ? { eventId, userId: session.id }
+          : { eventId },
       include: {
         match: true,
         team: true,

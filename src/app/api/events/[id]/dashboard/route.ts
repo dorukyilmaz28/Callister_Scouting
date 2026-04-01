@@ -26,7 +26,10 @@ export async function GET(
           where: { eventId_teamId_userId: { eventId, teamId: a.teamId, userId } },
         });
         const matchCount = await prisma.matchScout.count({
-          where: { eventId, teamId: a.teamId },
+          where:
+            session.role === "scout"
+              ? { eventId, teamId: a.teamId, userId }
+              : { eventId, teamId: a.teamId },
         });
         return {
           teamId: a.teamId,

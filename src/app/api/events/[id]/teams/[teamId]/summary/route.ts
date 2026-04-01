@@ -33,7 +33,10 @@ export async function GET(
     });
     if (!team) return NextResponse.json({ error: "Team not found" }, { status: 404 });
     const matchScouts = await prisma.matchScout.findMany({
-      where: { eventId, teamId },
+      where:
+        session.role === "scout"
+          ? { eventId, teamId, userId: session.id }
+          : { eventId, teamId },
       include: { match: true },
     });
     const pit = team.pitScouts[0] ?? null;
